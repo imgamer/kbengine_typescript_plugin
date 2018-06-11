@@ -26,11 +26,10 @@ export default class KBEEvent
             eventList = [];
             this._events[eventName] = eventList;
         }
-        let eventInfo: EventInfo = new EventInfo(p_object, cbFunction);
-        eventList.push(eventInfo);
+        eventList.push(new EventInfo(p_object, cbFunction));
     }
 
-    static Deregister(eventName: string, cbFunction: Function): void
+    static Deregister(eventName: string, p_object: object, cbFunction: Function): void
     {
         let eventList: Array<EventInfo> = this._events[eventName];
         if(eventList === undefined)
@@ -45,7 +44,7 @@ export default class KBEEvent
             // 注意，严格模式下，arguments,call等被禁用，不可访问这些成员
             //KBEDebug.WARNING_MSG("Event::Deregister:let key of eventList.:" +item.m_cbFunction.toString());
 
-            if(item.m_cbFunction === cbFunction)
+            if(p_object === item.m_object && item.m_cbFunction === cbFunction)
             {
                 let index: number = eventList.indexOf(item);
                 eventList.splice(index, 1);
@@ -73,9 +72,7 @@ export default class KBEEvent
         {
             try
             {
-                // 注意，传入和注册函数参数类型数量不一致也不会出错，作为事件函数的参数类型检查没有作用
-                // this指针是什么不得而知，可能是当前的上下文Event对象，因此必须使用apply绑定原对象
-                // error：item.m_cbFunction(params); 
+                // 注意，传入参数和注册函数参数类型数量可以不一致，作为事件函数的参数类型检查没有作用
                 item.m_cbFunction.apply(item.m_object, params);
             }
             catch(e)
@@ -87,6 +84,12 @@ export default class KBEEvent
 
     static DeregisterObject(p_object: object): void
     {
+        if(p_object === null)
+        {
+            KBEDebug.ERROR_MSG("Event::DeregisterObject:object cannot be null.");
+            return;
+        }
+
         let deleteCount: number = 0;
         for(let key in this._events)
         {
