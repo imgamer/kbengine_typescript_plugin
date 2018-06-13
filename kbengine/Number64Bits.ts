@@ -1,11 +1,9 @@
 
-import MemoryStream from "./MemoryStream";
-
 export class INT64
 {
-    private low: number;
-    private high: number;
-    private sign: number = 1;
+    low: number;
+    high: number;
+    sign: number = 1;
 
     constructor(p_low: number, p_high: number)
     {
@@ -54,8 +52,8 @@ export class INT64
 
 export class UINT64
 {
-    private low: number;
-    private high: number;
+    low: number;
+    high: number;
 
     constructor(p_low: number, p_high: number)
     {
