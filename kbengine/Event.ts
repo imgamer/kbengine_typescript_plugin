@@ -18,7 +18,7 @@ export default class KBEEvent
 {
     private static _events: {} = {};
 
-    static Register(eventName: string, p_object: object, cbFunction: Function): void
+    static Register(eventName: string, p_object: object|null, cbFunction: Function): void
     {
         let eventList: Array<EventInfo> = this._events[eventName];  // 或者let eventList: EventInfo[] = [];
         if(eventList === undefined)
@@ -29,7 +29,7 @@ export default class KBEEvent
         eventList.push(new EventInfo(p_object, cbFunction));
     }
 
-    static Deregister(eventName: string, p_object: object, cbFunction: Function): void
+    static Deregister(eventName: string, p_object: object|null, cbFunction: Function): void
     {
         let eventList: Array<EventInfo> = this._events[eventName];
         if(eventList === undefined)

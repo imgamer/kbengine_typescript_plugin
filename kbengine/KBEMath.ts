@@ -14,12 +14,12 @@ export function Clamp(value: number, min: number, max: number): number
     return value < min ? min : value > max? max: value;
 }
 
-export function Int82Angle(value: number, half: boolean): number
+export function Int8ToAngle(value: number, half: boolean): number
 {
     return value * (Math.PI / (half ? 254.0 : 128.0));
 }
 
-export function Angle2Int8(value: number, half: boolean): number
+export function AngleToInt8(value: number, half: boolean): number
 {
     var angle = 0;
     if(!half)
