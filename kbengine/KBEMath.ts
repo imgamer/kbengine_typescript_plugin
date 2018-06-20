@@ -76,3 +76,19 @@ export class Vector3
         return Math.sqrt(x * x + y * y + z * z);
     }
 }
+
+export class Vector4
+{
+    x: number;
+    y: number;
+    z: number;
+    w: number;
+
+    constructor(x: number, y:number, z: number, w: number)
+    {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.w = w;
+    }
+}
