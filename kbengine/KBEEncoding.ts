@@ -37,7 +37,7 @@ export function UTF8ArrayToString(array: Uint8Array): string
                 i += 3;
                 break;
             default:
-                KBEDebug.ERROR_MSG("UTF8ArrayToString::execute flow cant reach here.");
+                KBEDebug.ERROR_MSG("UTF8ArrayToString::execute flow shouldnt reach here.");
         }
     }
 
