@@ -47,4 +47,9 @@ export default class KBEDebug
             console.error.apply(this, optionalParams);
         }
     }
+
+    static ASSERT(condition?: boolean, message?: string, ...data: any[]): void
+    {
+        console.assert(condition, message, ...data);
+    }
 }
