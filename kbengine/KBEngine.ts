@@ -1,5 +1,7 @@
 
 import KBEDebug from "./KBEDebug";
+import KBEEvent from "./Event";
+import NetworkInterface from "./NetworkInterface";
 
 export class KBEngineArgs
 {
@@ -43,7 +45,11 @@ export class KBEngineApp
 	private baseappIP = "";
 	private baseappPort = 0;
 
-    private socket = null;
+    private currserver = "loginapp";
+    private currstate = "create";
+
+    private socket: WebSocket = null;
+    private networkInterface: NetworkInterface = new NetworkInterface();
 
     private static _app: KBEngineApp = null;
     static get app()
@@ -86,6 +92,7 @@ export class KBEngineApp
     Reset(): void
     {
         KBEDebug.DEBUG_MSG("KBEngineApp::Reset");
+        this.networkInterface.Disconnect();
     }
 
     Login(userName: string, password: string, datas: string): void
@@ -100,16 +107,31 @@ export class KBEngineApp
 
     private Login_loginapp(noconnect: boolean): void
     {
+        if(noconnect)
+        {
+            let addr: string = "ws://" + this.ip +":" + this.port;
+            KBEDebug.INFO_MSG("KBEngineApp::Login_loginapp: start connect to " + addr + "!");
+            
+            this.networkInterface.ConnectTo(addr, (event: MessageEvent) => this.OnOpenLoginapp_login(event));
+        }
+        else
+        {
 
+        }
     }
 
-    private Connect(addr: string): void
+    private OnOpenLoginapp_login(event: MessageEvent) 
     {
+        KBEDebug.DEBUG_MSG("KBEngineApp::onOpenLoginapp_login:success to %s.", this.ip);
+        if(!this.networkInterface.IsGood)   // 有可能在连接过程中被关闭
+        {
+            KBEDebug.WARNING_MSG("KBEngineApp::onOpenLoginapp_login:network has been closed in connecting!");
+            return;
+        }
 
-    }
+        this.currserver = "loginapp";
+        this.currstate = "login";
 
-    private onopen()
-    {
-
+        KBEEvent.Fire("Event_onConnectionState", true);
     }
 }
