@@ -5,7 +5,7 @@ import KBEEvent from "./Event";
 export default class NetworkInterface
 {
     socket: WebSocket = null;
-    callbackFunc: any = null;
+    onOpenCB: Function = null;
 
     get IsGood(): boolean
     {
@@ -33,7 +33,7 @@ export default class NetworkInterface
         this.socket.onopen = this.onopen;
         if(callbackFunc)
         {
-            this.callbackFunc = callbackFunc;
+            this.onOpenCB = callbackFunc;
         }
     }
 
@@ -41,7 +41,7 @@ export default class NetworkInterface
     {
         try
         {
-            KBEDebug.INFO_MSG("NetworkInterface::Disconnect.11111"+this.IsGood)
+            KBEDebug.INFO_MSG("NetworkInterface::Disconnect："+this.IsGood)
             if(this.socket != null)
             {
                 this.socket.close();
@@ -50,16 +50,17 @@ export default class NetworkInterface
         }
         catch(e)
         {
-            KBEDebug.ERROR_MSG("NetworkInterface::Disconnect error:%s." + e);
+            KBEDebug.ERROR_MSG("NetworkInterface::Disconnect error:%s.", e);
         }
     }
 
     private onopen = (event: MessageEvent) =>
     {
-        KBEDebug.DEBUG_MSG("KBEngineApp::onopen:success!" + this);
-        if(this.callbackFunc)
+        KBEDebug.DEBUG_MSG("KBEngineApp::onopen:success!");
+        if(this.onOpenCB)
         {
-            this.callbackFunc(event);
+            this.onOpenCB(event);
+            this.onOpenCB = null;
         }
     }
     
