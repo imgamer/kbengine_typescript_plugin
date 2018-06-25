@@ -20,8 +20,8 @@ class PackFloatXType
 
 export default class MemoryStream
 {
-    private rpos: number = 0;
-    private wpos: number = 0;
+    rpos: number = 0;
+    wpos: number = 0;
     private buffer: ArrayBuffer;
 
     constructor(size_or_buffer: number | ArrayBuffer)
