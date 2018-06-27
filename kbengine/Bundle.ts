@@ -1,7 +1,7 @@
 
 import MemoryStream from "./MemoryStream"
 import Message from "./Message";
-import {INT64, UINT64} from "./Number64Bits";
+import {INT64, UINT64} from "./DataTypes";
 import NetworkInterface from "./NetworkInterface";
 
 const MAX_BUFFER: number = 1460 * 4;
@@ -78,8 +78,7 @@ export default class Bundle
 
         for(let stream of this.streams)
         {
-            this.stream = stream;
-            // TODO: network.send(this.stream.Getbuffer());
+            networkInterface.Send(stream.GetBuffer());
         }
 
         this.streams = new Array<MemoryStream>();

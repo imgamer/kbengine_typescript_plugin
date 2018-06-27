@@ -2,6 +2,9 @@
 import KBEDebug from "./KBEDebug";
 import KBEEvent from "./Event";
 import NetworkInterface from "./NetworkInterface";
+import Message from "./Message";
+import Bundle from "./Bundle";
+import MemoryStream from "./MemoryStream";
 
 export class KBEngineArgs
 {
@@ -77,6 +80,8 @@ export class KBEngineApp
         this.port = args.port;
 
         this.InstallEvents();
+
+        Message.BindFixedMessage();
     }
 
     InstallEvents(): void
@@ -133,5 +138,22 @@ export class KBEngineApp
         this.currstate = "login";
 
         KBEEvent.Fire("Event_onConnectionState", true);
+
+        if(!this.loginappMessageImported)
+        {
+            let bundle = new Bundle();
+            bundle.NewMessage(Message.messages["Loginapp_importClientMessages"]);
+            bundle.Send(this.networkInterface);
+        }
+    }
+
+    private Client_onImportClientMessages(stream: MemoryStream)
+    {
+        this.OnImportClientMessages(stream);
+    }
+
+    private OnImportClientMessages(stream: MemoryStream)
+    {
+        KBEDebug.DEBUG_MSG("KBEngineApp::OnImportClientMessages:import............len(%i)", stream.Length);
     }
 }

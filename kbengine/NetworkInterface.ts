@@ -54,6 +54,24 @@ export default class NetworkInterface
         }
     }
 
+    Send(buffer: ArrayBuffer)
+    {
+        if(!this.IsGood)
+        {
+            KBEDebug.ERROR_MSG("NetworkInterface::Send:socket is unavailable.");
+            return;
+        }
+        
+        try
+        {
+            this.socket.send(buffer);
+        }
+        catch(e)
+        {
+            KBEDebug.ERROR_MSG("NetworkInterface::Send error:%s.", e);
+        }
+    }
+
     private onopen = (event: MessageEvent) =>
     {
         KBEDebug.DEBUG_MSG("KBEngineApp::onopen:success!");

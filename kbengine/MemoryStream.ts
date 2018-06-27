@@ -1,5 +1,5 @@
 
-import {INT64, UINT64} from "./Number64Bits"
+import {INT64, UINT64} from "./DataTypes";
 import KBEDebug from "./KBEDebug";
 
 class PackFloatXType

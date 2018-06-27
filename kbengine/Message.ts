@@ -1,6 +1,7 @@
 import KBEDebug from "./KBEDebug";
 import * as DataTypes from "./DataTypes";
 import MemoryStream from "./MemoryStream";
+import {KBEngineApp} from "./KBEngine";
 
 export default class Message
 {
@@ -13,6 +14,11 @@ export default class Message
     argsType: number;
     args: Array<DataTypes.DATATYPE_BASE> = new Array<DataTypes.DATATYPE_BASE>();
     handler: Function = null;
+
+    static BindFixedMessage()
+    {
+        Message.messages["Loginapp_importClientMessages"] = new Message(5, "importClientMessages", 0, 0, new Array(), null);
+    }
 
     constructor(id: number, name: string, length: number, argstype: number, args: Array<number>, handler: Function)
     {
@@ -64,7 +70,7 @@ export default class Message
         }
         else
         {
-            //this.handler.apply(KBEngine.app, this.CreateFromStream(stream));
+            this.handler.apply(KBEngineApp.app, this.CreateFromStream(stream));
         }
     }
 }
