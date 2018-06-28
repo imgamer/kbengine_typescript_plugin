@@ -13,11 +13,14 @@ export default class Message
     length: number;
     argsType: number;
     args: Array<DataTypes.DATATYPE_BASE> = new Array<DataTypes.DATATYPE_BASE>();
-    handler: Function = null;
+    handler: Function = undefined;
 
     static BindFixedMessage()
     {
         Message.messages["Loginapp_importClientMessages"] = new Message(5, "importClientMessages", 0, 0, new Array(), null);
+
+        Message.messages["Client_onImportClientMessages"] = new Message(518, "Client_onImportClientMessages", -1, -1, new Array(), KBEngineApp.app.Client_onImportClientMessages);
+        Message.clientMassges[Message.messages["Client_onImportClientMessages"].id] = Message.messages["Client_onImportClientMessages"];
     }
 
     constructor(id: number, name: string, length: number, argstype: number, args: Array<number>, handler: Function)
@@ -51,7 +54,9 @@ export default class Message
 
     HandleMessage(stream: MemoryStream): void
     {
-        if(this.handler === null)
+        KBEDebug.DEBUG_MSG("KBEngine.Message::handleMessage:name(%s), this.args.length(%d), this.argsType(%d).", this.name, this.args.length, this.argsType);
+
+        if(this.handler === undefined)
         {
             KBEDebug.ERROR_MSG("KBEngine.Message::handleMessage: interface(" + this.name + "/" + this.id + ") no implement!");
             return;
@@ -61,11 +66,11 @@ export default class Message
         {
             if(this.argsType < 0)
             {
-                this.handler(stream);
+                this.handler.call(KBEngineApp.app, stream);
             }
             else
             {
-                this.handler();
+                this.handler.call(KBEngineApp.app);
             }
         }
         else

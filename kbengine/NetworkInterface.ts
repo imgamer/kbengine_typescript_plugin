@@ -1,6 +1,8 @@
 
 import KBEDebug from "./KBEDebug";
 import KBEEvent from "./Event";
+import MemoryStream from "./MemoryStream";
+import Message from "./Message";
 
 export default class NetworkInterface
 {
@@ -20,7 +22,7 @@ export default class NetworkInterface
         }
         catch(e)
         {
-            KBEDebug.ERROR_MSG("KBEngineApp::Connect:Init socket error:" + e);
+            KBEDebug.ERROR_MSG("NetworkInterface::Connect:Init socket error:" + e);
             KBEEvent.Fire("Event_onConnectionState", false);
             return;
         }
@@ -61,9 +63,10 @@ export default class NetworkInterface
             KBEDebug.ERROR_MSG("NetworkInterface::Send:socket is unavailable.");
             return;
         }
-        
+
         try
         {
+            KBEDebug.DEBUG_MSG("NetworkInterface::Send buffer length:[%i].", buffer.byteLength);
             this.socket.send(buffer);
         }
         catch(e)
@@ -74,7 +77,7 @@ export default class NetworkInterface
 
     private onopen = (event: MessageEvent) =>
     {
-        KBEDebug.DEBUG_MSG("KBEngineApp::onopen:success!");
+        KBEDebug.DEBUG_MSG("NetworkInterface::onopen:success!");
         if(this.onOpenCB)
         {
             this.onOpenCB(event);
@@ -82,19 +85,52 @@ export default class NetworkInterface
         }
     }
     
-    private onerror = () =>
+    private onerror = (event: MessageEvent) =>
     {
-        KBEDebug.DEBUG_MSG("KBEngineApp::onerror:...!");
+        KBEDebug.DEBUG_MSG("NetworkInterface::onerror:...!");
     }
 
     private onmessage = (event: MessageEvent) =>
     {
-        let data = event.data;
-        KBEDebug.DEBUG_MSG("KBEngineApp::onmessage:...!");
+        let data: ArrayBuffer = event.data;
+        KBEDebug.DEBUG_MSG("NetworkInterface::onmessage:...!" + data.byteLength);
+        let stream: MemoryStream = new MemoryStream(data);
+        stream.wpos = data.byteLength;
+
+        while(stream.rpos < stream.wpos)
+        {
+            let msgID = stream.ReadUint16();
+            KBEDebug.DEBUG_MSG("NetworkInterface::onmessage:...!msgID:" + msgID);
+
+            let handler: Message = Message.clientMassges[msgID];
+            if(!handler)
+            {
+                KBEDebug.ERROR_MSG("NetworkInterface::onmessage:message(%i) has not found.", msgID);
+            }
+            else
+            {
+                let msgLen = handler.length;
+                if(msgLen === -1)
+                {
+                    msgLen = stream.ReadUint16();
+                    if(msgLen === 65535)
+                    {
+                        msgLen = stream.ReadUint32();
+                    }
+                }
+
+                let wpos = stream.wpos;
+                let rpos = stream.rpos + msgLen;
+                stream.wpos = rpos;
+                handler.HandleMessage(stream);
+                stream.wpos = wpos;
+                stream.rpos = rpos;
+            }
+        }
     }
 
     private onclose = () =>
     {
-        KBEDebug.DEBUG_MSG("KBEngineApp::onclose:...!");
+        KBEDebug.DEBUG_MSG("NetworkInterface::onclose:...!");
     }
 }

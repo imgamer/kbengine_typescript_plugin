@@ -5,6 +5,7 @@ import NetworkInterface from "./NetworkInterface";
 import Message from "./Message";
 import Bundle from "./Bundle";
 import MemoryStream from "./MemoryStream";
+import {UTF8ArrayToString} from "./KBEEncoding";
 
 export class KBEngineArgs
 {
@@ -51,7 +52,8 @@ export class KBEngineApp
     private currserver = "loginapp";
     private currstate = "create";
 
-    private socket: WebSocket = null;
+    private serverErrs: {[key:number]: ServerError} = {};
+
     private networkInterface: NetworkInterface = new NetworkInterface();
 
     private static _app: KBEngineApp = null;
@@ -66,14 +68,14 @@ export class KBEngineApp
         {
             throw Error("KBEngineApp must be singleton.");
         }
-        KBEngineApp._app = new KBEngineApp(args);
-
+        new KBEngineApp(args);
         return KBEngineApp._app;
     }
 
     private constructor(args: KBEngineArgs)
     {
         KBEDebug.ASSERT(KBEngineApp._app === null, "KBEngineApp::constructor:singleton KBEngineApp._app must be null.");
+        KBEngineApp._app = this;
 
         this.args = args;
         this.ip = args.ip;
@@ -147,13 +149,131 @@ export class KBEngineApp
         }
     }
 
-    private Client_onImportClientMessages(stream: MemoryStream)
+    Client_onImportClientMessages(stream: MemoryStream)
     {
         this.OnImportClientMessages(stream);
     }
 
-    private OnImportClientMessages(stream: MemoryStream)
+    OnImportClientMessages(stream: MemoryStream): void
     {
-        KBEDebug.DEBUG_MSG("KBEngineApp::OnImportClientMessages:import............len(%i)", stream.Length);
+        let msgcount = stream.ReadUint16();
+        KBEDebug.DEBUG_MSG("KBEngineApp::OnImportClientMessages:import............stream len(%d), msgcount(%d).", stream.Length(), msgcount);
+
+        while(msgcount > 0)
+        {
+            msgcount--;
+
+            let msgid = stream.ReadUint16();
+            let msglen = stream.ReadInt16();
+            let msgname = stream.ReadString();
+            let argtype = stream.ReadInt8();
+            let argsize  = stream.ReadUint8();
+            let argstypes = new Array<number>(argsize);
+            for(let i = 0; i < argsize; i++)
+            {
+                argstypes[i] = stream.ReadUint8();
+            }
+
+            let handler: Function = undefined;
+            let isClientMessage: boolean = this.IsClientMessage(msgname);
+            if(isClientMessage)
+            {
+                handler = this.GetFunction(msgname);
+                if(handler === undefined)
+                {
+                    KBEDebug.ERROR_MSG("KBEngineApp::onImportClientMessages[" + KBEngineApp.app.currserver + "]: interface(" + msgname + "/" + msgid + ") no implement!");
+                }
+            }
+
+            let msg: Message = new Message(msgid, msgname, msglen, argtype, argstypes, handler);
+            if(msgname.length > 0)
+            {
+                Message.messages[msgname] = msg;
+                if(isClientMessage)
+                {
+                    Message.clientMassges[msgid] = msg;
+                }
+            }
+            else
+            {
+                Message[this.currserver][msgid] = msg;
+            }
+
+            KBEDebug.DEBUG_MSG("KBEngineApp::OnImportClientMessages:import............msgid(%d), msglen(%d), msgname(%s), argtype(%d), argsize(%d).", msgid, msglen, msgname, argtype, argsize);
+        }
+
+        this.onImportClientMessagesCompleted();
+    }
+
+    private onImportClientMessagesCompleted()
+    {
+        KBEDebug.INFO_MSG("KBEngineApp::onImportClientMessagesCompleted:successfully......currserver(%s) currstate(%s).", this.currserver, this.currstate);
+        this.Hello();
+
+        if(this.currserver === "loginapp")
+        {
+            this.loginappMessageImported = true;
+            if(!this.serverErrorsDescrImported)
+            {
+                this.serverErrorsDescrImported = true;
+                KBEDebug.INFO_MSG("KBEngine::onImportClientMessagesCompleted(): send importServerErrorsDescr!");
+                let bundle: Bundle = new Bundle();
+                bundle.NewMessage(Message.messages["Loginapp_importServerErrorsDescr"]);
+                bundle.Send(this.networkInterface);
+            }
+
+            if(this.currstate === "login")
+            {
+                //this.Login_loginapp(false);
+            }
+            else if(this.currstate == "resetpassword")
+            {
+            }
+            else    // createAccount
+            {
+            }
+        }
+        else
+        {
+            this.baseappMessageImported = true;
+        }
+    }
+
+    private IsClientMessage(name: string): boolean
+    {
+        return name.indexOf("Client_") >= 0;
+    }
+
+    private GetFunction(name: string): Function
+    {
+        let func: Function = this[name];
+        if(!(func instanceof Function))
+        {
+            func = undefined;
+        }
+        return func;
+    }
+
+    Hello()
+    {
+        KBEDebug.INFO_MSG("KBEngine::Hello.........");
+    }
+
+    Client_onImportServerErrorsDescr(stream: MemoryStream)
+    {
+        let size: number = stream.ReadUint16();
+
+        while(size > 0)
+        {
+            size--;
+            let error = new ServerError();
+            error.id = stream.ReadUint16()
+            error.name = UTF8ArrayToString(stream.ReadBlob());
+            error.description = UTF8ArrayToString(stream.ReadBlob());
+
+            this.serverErrors[error.id] = error;
+
+            KBEDebug.INFO_MSG("Client_onImportServerErrorsDescr: id=" + error.id + ", name=" + error.name + ", descr=" + error.description);
+        }
     }
 }
