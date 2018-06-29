@@ -3,6 +3,7 @@ import MemoryStream from "./MemoryStream"
 import Message from "./Message";
 import {INT64, UINT64} from "./DataTypes";
 import NetworkInterface from "./NetworkInterface";
+import KBEDebug from "./KBEDebug";
 
 const MAX_BUFFER: number = 1460 * 4;
 const MESSAGE_ID_LENGTH: number = 2;
@@ -32,6 +33,9 @@ export default class Bundle
 
     Fini(isSend: boolean)
     {
+        if(isSend)
+            KBEDebug.DEBUG_MSG("Bundle::Fini............message(%s:%s):messageNum(%d).stream length(%d).", this.message.name, isSend, this.messageNum, this.stream.Length());
+
         if(this.messageNum > 0)
         {
             this.WriteMessageLength(this.messageLength);
@@ -58,7 +62,7 @@ export default class Bundle
 
         if(message.length == -1)
         {
-            this.messageLengthBuffer = new Uint8Array(this.stream.GetBuffer(), this.stream.wpos + MESSAGE_ID_LENGTH, 2);
+            this.messageLengthBuffer = new Uint8Array(this.stream.GetRawBuffer(), this.stream.wpos + MESSAGE_ID_LENGTH, 2);
         }
 
         this.stream.WriteUint16(message.id);
@@ -158,13 +162,13 @@ export default class Bundle
 
     WriteBlob(value: string|Uint8Array)
     {
-        this.CheckStream(value.length + 1);
+        this.CheckStream(value.length + 4);
         this.stream.WriteBlob(value);
     }
 
     WriteString(value: string)
     {
-        this.CheckStream(value.length + 4);
+        this.CheckStream(value.length + 1);
         this.stream.WriteString(value);
     }
 }

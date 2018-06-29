@@ -324,4 +324,9 @@ export default class MemoryStream
     {
         return this.buffer.slice(this.rpos, this.wpos);
     }
+
+    GetRawBuffer(): ArrayBuffer
+    {
+        return this.buffer;
+    }
 }

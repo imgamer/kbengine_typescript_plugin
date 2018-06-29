@@ -66,7 +66,7 @@ export default class NetworkInterface
 
         try
         {
-            KBEDebug.DEBUG_MSG("NetworkInterface::Send buffer length:[%i].", buffer.byteLength);
+            KBEDebug.DEBUG_MSG("NetworkInterface::Send buffer length:[%d].", buffer.byteLength);
             this.socket.send(buffer);
         }
         catch(e)
@@ -105,7 +105,7 @@ export default class NetworkInterface
             let handler: Message = Message.clientMassges[msgID];
             if(!handler)
             {
-                KBEDebug.ERROR_MSG("NetworkInterface::onmessage:message(%i) has not found.", msgID);
+                KBEDebug.ERROR_MSG("NetworkInterface::onmessage:message(%d) has not found.", msgID);
             }
             else
             {
