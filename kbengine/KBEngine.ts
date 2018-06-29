@@ -52,11 +52,19 @@ export class KBEngineApp
     private currserver = "loginapp";
     private currstate = "create";
 
-    private serverErrs: {[key:number]: ServerError} = {};
-
     private networkInterface: NetworkInterface = new NetworkInterface();
 
-    private static _app: KBEngineApp = null;
+    private serverVersion = "";
+    private serverScriptVersion = "";
+    private serverProtocolMD5 = "";
+    private serverEntityDefMD5 = "";
+    private clientVersion = "0.9.12";
+    private clientScriptVersion = "0.1.0";
+
+    private lastTickTime: number;
+    private lastTickCBTime: number;
+
+    private static _app: KBEngineApp = undefined;
     static get app()
     {
         return KBEngineApp._app;    // 如果外部使用者因为访问到null出错，表示需要先Create
@@ -64,7 +72,7 @@ export class KBEngineApp
 
     static Create(args: KBEngineArgs): KBEngineApp
     {
-        if(KBEngineApp._app != null)
+        if(KBEngineApp._app != undefined)
         {
             throw Error("KBEngineApp must be singleton.");
         }
@@ -74,7 +82,7 @@ export class KBEngineApp
 
     private constructor(args: KBEngineArgs)
     {
-        KBEDebug.ASSERT(KBEngineApp._app === null, "KBEngineApp::constructor:singleton KBEngineApp._app must be null.");
+        KBEDebug.ASSERT(KBEngineApp._app === undefined, "KBEngineApp::constructor:singleton KBEngineApp._app must be undefined.");
         KBEngineApp._app = this;
 
         this.args = args;
@@ -84,6 +92,7 @@ export class KBEngineApp
         this.InstallEvents();
 
         Message.BindFixedMessage();
+
     }
 
     InstallEvents(): void
@@ -93,7 +102,38 @@ export class KBEngineApp
 
     Update(): void
     {
-        KBEDebug.DEBUG_MSG("KBEngineApp::update");
+        KBEDebug.DEBUG_MSG("KBEngineApp::update...");
+        if(!this.networkInterface.IsGood)
+        {
+            KBEDebug.DEBUG_MSG("KBEngineApp::update...this.networkInterface.IsGood noooooooooo.");
+            return;
+        }
+
+        let now = (new Date()).getTime();
+        if((now - this.lastTickTime) / 1000 > 15)
+        {
+            if(this.lastTickCBTime < this.lastTickTime)
+            {
+                KBEDebug.ERROR_MSG("KBEngineApp::Update: Receive appTick timeout!");
+                this.networkInterface.Disconnect();
+                return;
+            }
+
+            let bundle = new Bundle();
+            if(this.currserver === "loginapp")
+            {
+                bundle.NewMessage(Message.messages["Loginapp_onClientActiveTick"]);
+            }
+            else
+            {
+                bundle.NewMessage(Message.messages["Baseapp_onClientActiveTick"]);
+            }
+            bundle.Send(this.networkInterface);
+
+            this.lastTickTime = now;
+        }
+
+        this.UpdatePlayerToServer();
     }
 
     Reset(): void
@@ -208,7 +248,7 @@ export class KBEngineApp
     private onImportClientMessagesCompleted()
     {
         KBEDebug.INFO_MSG("KBEngineApp::onImportClientMessagesCompleted:successfully......currserver(%s) currstate(%s).", this.currserver, this.currstate);
-        this.Hello();
+        
 
         if(this.currserver === "loginapp")
         {
@@ -237,6 +277,7 @@ export class KBEngineApp
         {
             this.baseappMessageImported = true;
         }
+        this.Hello();
     }
 
     private IsClientMessage(name: string): boolean
@@ -254,9 +295,37 @@ export class KBEngineApp
         return func;
     }
 
-    Hello()
+    private Hello()
     {
         KBEDebug.INFO_MSG("KBEngine::Hello.........");
+        let bundle: Bundle = new Bundle();
+        if(this.currserver === "loginapp")
+        {
+            bundle.NewMessage(Message.messages["Loginapp_hello"]);
+        }
+        else
+        {
+            bundle.NewMessage(Message.messages["Baseapp_hello"]);
+        }
+
+        bundle.WriteString(this.clientVersion);
+        bundle.WriteString(this.clientScriptVersion);
+        bundle.WriteBlob(this.encryptedKey);
+        bundle.Send(this.networkInterface);
+    }
+
+    Client_onHelloCB(stream: MemoryStream)
+    {
+        KBEDebug.INFO_MSG("KBEngine::Client_onHelloCB.........stream length:%d.", stream.Length());
+        this.serverVersion = stream.ReadString();
+        this.serverScriptVersion = stream.ReadString();
+        this.serverProtocolMD5 = stream.ReadString();
+        this.serverEntityDefMD5 = stream.ReadString();
+        let ctype = stream.ReadInt32();
+
+        KBEDebug.INFO_MSG("KBEngineApp::Client_onHelloCB: verInfo(" + this.serverVersion + "), scriptVerInfo(" + 
+        this.serverScriptVersion + "), serverProtocolMD5(" + this.serverProtocolMD5 + "), serverEntityDefMD5(" + 
+        this.serverEntityDefMD5 + "), ctype(" + ctype + ")!");
     }
 
     Client_onImportServerErrorsDescr(stream: MemoryStream)
@@ -275,5 +344,21 @@ export class KBEngineApp
 
             KBEDebug.INFO_MSG("Client_onImportServerErrorsDescr: id=" + error.id + ", name=" + error.name + ", descr=" + error.description);
         }
+    }
+
+    GetServerError(id: number): string
+    {
+        let error: ServerError = this.serverErrors[id];
+        if(error == undefined)
+        {
+            return "";
+        }
+
+        return error.name + "[" + error.description + "]";
+    }
+
+    private UpdatePlayerToServer()
+    {
+        KBEDebug.DEBUG_MSG("KBEngine::UpdatePlayerToServer.........");
     }
 }
