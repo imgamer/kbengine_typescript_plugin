@@ -83,7 +83,7 @@ export default class MemoryStream
         let value = this.ReadUint32();
         if(value >= 2147483648)
             value -= 4294967296;
-        return;
+        return value;
     }
 
     ReadUint64(): UINT64
