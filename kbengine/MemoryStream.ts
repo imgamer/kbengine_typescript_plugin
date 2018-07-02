@@ -115,19 +115,26 @@ export default class MemoryStream
     ReadString(): string
     {
         let buf = new Int8Array(this.buffer, this.rpos);
-        let value: string = '';
+        let value: string = "";
         let index: number = 0;
-        do
+        
+        while(true)
         {
-            if(this.rpos + index + 1 >= this.buffer.byteLength)
-            {
-                throw(new Error("KBEngine.MemoryStream::ReadString overflow(>=) max length:" + this.buffer.byteLength));
-            }
-
             if(buf[index] != 0 )
+            {
                 value += String.fromCharCode(buf[index]);
+                index += 1;
+                if(this.rpos + index >= this.buffer.byteLength)
+                {
+                    throw(new Error("KBEngine.MemoryStream::ReadString overflow(>=) max length:" + this.buffer.byteLength));
+                }
+            }
+            else
+            {
+                index += 1;
+                break;
+            }
         }
-        while(buf[index++] != 0)
 
         this.rpos += index;
         return value;
