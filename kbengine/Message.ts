@@ -18,6 +18,7 @@ export default class Message
     static BindFixedMessage()
     {
         Message.messages["Loginapp_importClientMessages"] = new Message(5, "importClientMessages", 0, 0, new Array(), null);
+        Message.messages["Baseapp_importClientMessages"] = new Message(207, "importClientMessages", 0, 0, new Array(), null);
 
         Message.messages["Client_onImportClientMessages"] = new Message(518, "Client_onImportClientMessages", -1, -1, new Array(), KBEngineApp.app.Client_onImportClientMessages);
         Message.clientMassges[Message.messages["Client_onImportClientMessages"].id] = Message.messages["Client_onImportClientMessages"];

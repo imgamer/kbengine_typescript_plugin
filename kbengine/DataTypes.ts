@@ -95,7 +95,7 @@ export abstract class DATATYPE_BASE
 {
     static readonly FLOATE_MAX = Number.MAX_VALUE;
 
-    bind(): void
+    Bind(): void
     {}
 
     abstract CreateFromStream(stream: MemoryStream): any;
@@ -621,8 +621,8 @@ export class DATATYPE_ARRAY extends DATATYPE_BASE
 
 export class DATATYPE_FIXED_DICT extends DATATYPE_BASE
 {
-    dictType: {[key: string]: any};
-    implementedBy: null;
+    dictType: {[key: string]: any} = {};
+    implementedBy: string;
 
     Bind()
     {
@@ -692,6 +692,7 @@ export function InitDatatypeMapping()
     datatypes["STRING"] = new DATATYPE_STRING();
     datatypes["VECTOR2"] = new DATATYPE_VECTOR2();
     datatypes["VECTOR3"] = new DATATYPE_VECTOR3();
+    datatypes["VECTOR4"] = new DATATYPE_VECTOR4();
     datatypes["PYTHON"] = new DATATYPE_PYTHON();
     datatypes["UNICODE"] = new DATATYPE_UNICODE();
     datatypes["MAILBOX"] = new DATATYPE_MAILBOX();

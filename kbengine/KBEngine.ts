@@ -6,6 +6,7 @@ import Message from "./Message";
 import Bundle from "./Bundle";
 import MemoryStream from "./MemoryStream";
 import {UTF8ArrayToString} from "./KBEEncoding";
+import * as DataTypes from "./DataTypes";
 
 export class KBEngineArgs
 {
@@ -28,11 +29,14 @@ class ServerError
 export class KBEngineApp
 {
     private args: KBEngineArgs;
+    private idInterval: number;
 
     private userName: string = "test";
     private password: string = "123456";
     private clientDatas: string = "";
     private encryptedKey: string = "";
+
+    private serverdatas: Uint8Array;
 
 	private loginappMessageImported = false;
 	private baseappMessageImported = false;
@@ -61,8 +65,8 @@ export class KBEngineApp
     private clientVersion = "0.9.12";
     private clientScriptVersion = "0.1.0";
 
-    private lastTickTime: number;
-    private lastTickCBTime: number;
+    private lastTickTime: number = 0;
+    private lastTickCBTime: number = 0;
 
     private static _app: KBEngineApp = undefined;
     static get app()
@@ -80,6 +84,19 @@ export class KBEngineApp
         return KBEngineApp._app;
     }
 
+    Destroy()
+    {
+        if(this.idInterval != undefined)
+        {
+            clearInterval(this.idInterval);
+        }
+
+        if(KBEngineApp.app === undefined)
+        {
+            return;
+        }       
+    }
+
     private constructor(args: KBEngineArgs)
     {
         KBEDebug.ASSERT(KBEngineApp._app === undefined, "KBEngineApp::constructor:singleton KBEngineApp._app must be undefined.");
@@ -92,7 +109,9 @@ export class KBEngineApp
         this.InstallEvents();
 
         Message.BindFixedMessage();
+        DataTypes.InitDatatypeMapping();
 
+        this.idInterval = setInterval(this.Update.bind(this), this.args.updateHZ);
     }
 
     InstallEvents(): void
@@ -102,14 +121,19 @@ export class KBEngineApp
 
     Update(): void
     {
-        KBEDebug.DEBUG_MSG("KBEngineApp::update...");
+        KBEngineApp.app.SendTick();
+    }
+
+    private SendTick()
+    {
         if(!this.networkInterface.IsGood)
         {
-            KBEDebug.DEBUG_MSG("KBEngineApp::update...this.networkInterface.IsGood noooooooooo.");
+            KBEDebug.DEBUG_MSG("KBEngineApp::SendTick...this.networkInterface.IsGood noooooooooo.");
             return;
         }
-
+        
         let now = (new Date()).getTime();
+        //KBEDebug.DEBUG_MSG("KBEngineApp::SendTick...now(%d), this.lastTickTime(%d), this.lastTickCBTime(%d).", now, this.lastTickTime, this.lastTickCBTime);
         if((now - this.lastTickTime) / 1000 > 15)
         {
             if(this.lastTickCBTime < this.lastTickTime)
@@ -140,6 +164,8 @@ export class KBEngineApp
     {
         KBEDebug.DEBUG_MSG("KBEngineApp::Reset");
         this.networkInterface.Disconnect();
+
+        DataTypes.Reset();
     }
 
     Login(userName: string, password: string, datas: string): void
@@ -163,7 +189,13 @@ export class KBEngineApp
         }
         else
         {
-
+            let bundle = new Bundle();
+            bundle.NewMessage(Message.messages["Loginapp_login"]);
+            bundle.WriteInt8(this.args.clientType);
+            bundle.WriteBlob(this.clientDatas);
+            bundle.WriteString(this.userName);
+            bundle.WriteString(this.password);
+            bundle.Send(this.networkInterface);
         }
     }
 
@@ -187,6 +219,8 @@ export class KBEngineApp
             bundle.NewMessage(Message.messages["Loginapp_importClientMessages"]);
             bundle.Send(this.networkInterface);
         }
+
+        this.lastTickCBTime = (new Date()).getTime();
     }
 
     Client_onImportClientMessages(stream: MemoryStream)
@@ -194,7 +228,7 @@ export class KBEngineApp
         this.OnImportClientMessages(stream);
     }
 
-    OnImportClientMessages(stream: MemoryStream): void
+    private OnImportClientMessages(stream: MemoryStream): void
     {
         let msgcount = stream.ReadUint16();
         KBEDebug.DEBUG_MSG("KBEngineApp::OnImportClientMessages:import............stream len(%d), msgcount(%d).", stream.Length(), msgcount);
@@ -248,7 +282,7 @@ export class KBEngineApp
     private onImportClientMessagesCompleted()
     {
         KBEDebug.INFO_MSG("KBEngineApp::onImportClientMessagesCompleted:successfully......currserver(%s) currstate(%s).", this.currserver, this.currstate);
-        
+        this.Hello();
 
         if(this.currserver === "loginapp")
         {
@@ -264,7 +298,7 @@ export class KBEngineApp
 
             if(this.currstate === "login")
             {
-                //this.Login_loginapp(false);
+                this.Login_loginapp(false);
             }
             else if(this.currstate == "resetpassword")
             {
@@ -276,8 +310,25 @@ export class KBEngineApp
         else
         {
             this.baseappMessageImported = true;
+            if(!this.entitydefImported)
+            {
+                KBEDebug.INFO_MSG("KBEngineApp::onImportClientMessagesCompleted: start importEntityDef ...");
+                let bundle = new Bundle();
+                bundle.NewMessage(Message.messages["Baseapp_importClientEntityDef"]);
+                bundle.Send(this.networkInterface);
+            }
+            else
+            {
+                this.onImportEntityDefCompleted();
+            }
         }
-        this.Hello();
+    }
+
+    private onImportEntityDefCompleted()
+    {
+        KBEDebug.INFO_MSG("KBEngineApp::onImportEntityDefCompleted: successfully!");
+        this.entitydefImported = true;
+        this.Login_baseapp(false);
     }
 
     private IsClientMessage(name: string): boolean
@@ -297,7 +348,7 @@ export class KBEngineApp
 
     private Hello()
     {
-        KBEDebug.INFO_MSG("KBEngine::Hello.........");
+        KBEDebug.INFO_MSG("KBEngine::Hello.........current server:%s.", this.currserver);
         let bundle: Bundle = new Bundle();
         if(this.currserver === "loginapp")
         {
@@ -326,8 +377,25 @@ export class KBEngineApp
         KBEDebug.INFO_MSG("KBEngineApp::Client_onHelloCB: verInfo(" + this.serverVersion + "), scriptVerInfo(" + 
         this.serverScriptVersion + "), serverProtocolMD5(" + this.serverProtocolMD5 + "), serverEntityDefMD5(" + 
         this.serverEntityDefMD5 + "), ctype(" + ctype + ")!");
+
+        this.lastTickCBTime = (new Date()).getTime();
     }
 
+    Client_onVersionNotMatch(stream: MemoryStream)
+	{
+        KBEDebug.DEBUG_MSG("KBEngine::Client_onVersionNotMatch.........stream length:%d.", stream.Length());
+		this.serverVersion = stream.ReadString();
+		KBEDebug.ERROR_MSG("Client_onVersionNotMatch: verInfo=" + this.clientVersion + " not match(server: " + this.serverVersion + ")");
+		KBEEvent.Fire("onVersionNotMatch", this.clientVersion, this.serverVersion);
+    }
+    
+	Client_onAppActiveTickCB()
+	{
+		let dateObject = new Date();
+        this.lastTickCBTime = dateObject.getTime();
+        KBEDebug.DEBUG_MSG("KBEngine::Client_onAppActiveTickCB.........lastTickCBTime:%d.", this.lastTickCBTime);
+    }
+    
     Client_onImportServerErrorsDescr(stream: MemoryStream)
     {
         let size: number = stream.ReadUint16();
@@ -359,6 +427,155 @@ export class KBEngineApp
 
     private UpdatePlayerToServer()
     {
-        KBEDebug.DEBUG_MSG("KBEngine::UpdatePlayerToServer.........");
+        //KBEDebug.DEBUG_MSG("KBEngine::UpdatePlayerToServer.........");
+    }
+
+    Client_onLoginFailed(stream: MemoryStream)
+	{
+		var failedcode = stream.ReadUint16();
+		this.serverdatas = stream.ReadBlob();
+		KBEDebug.ERROR_MSG("KBEngineApp::Client_onLoginFailed: failedcode(" + this.serverErrors[failedcode].name + "), datas(" + this.serverdatas.length + ")!");
+		KBEEvent.Fire("onLoginFailed", failedcode);
+    }
+    
+    Client_onLoginSuccessfully(stream: MemoryStream)
+	{
+        KBEDebug.DEBUG_MSG("Client_onLoginSuccessfully------------------->>>");
+		var accountName = stream.ReadString();
+		this.userName = accountName;
+		this.baseappIP = stream.ReadString();
+		this.baseappPort = stream.ReadUint16();
+		this.serverdatas = stream.ReadBlob();
+		
+		KBEDebug.INFO_MSG("KBEngineApp::Client_onLoginSuccessfully: accountName(" + accountName + "), addr(" + 
+        this.baseappIP + ":" + this.baseappPort + "), datas(" + this.serverdatas.length + ")!");
+		
+		this.networkInterface.Disconnect();
+		this.Login_baseapp(true);
+    }
+    
+    private Login_baseapp(noconnect: boolean)
+    {
+        if(noconnect)
+        {
+            let addr: string = "ws://" + this.baseappIP + ":" + this.baseappPort;
+            KBEDebug.INFO_MSG("KBEngineApp::Login_baseapp: start connect to " + addr + "!");
+            
+            this.networkInterface.ConnectTo(addr, (event: MessageEvent) => this.OnOpenBaseapp(event));
+        }
+        else
+        {
+            let bundle = new Bundle();
+            bundle.NewMessage(Message.messages["Baseapp_loginBaseapp"]);
+            bundle.WriteString(this.userName);
+            bundle.WriteString(this.password);
+            bundle.Send(this.networkInterface);
+        }
+    }
+
+    private OnOpenBaseapp(event: MessageEvent)
+    {
+        KBEDebug.INFO_MSG("KBEngineApp::onOpenBaseapp: successfully!");
+        this.currserver = "baseapp";
+        
+        if(!this.baseappMessageImported)
+        {
+            let bundle = new Bundle();
+            bundle.NewMessage(Message.messages["Baseapp_importClientMessages"]);
+            bundle.Send(this.networkInterface);
+            KBEEvent.Fire("Baseapp_importClientMessages");
+        }
+        else
+        {
+            this.onImportClientMessagesCompleted();
+        }
+    }
+
+    Client_onImportClientEntityDef(stream: MemoryStream)
+    {
+        this.OnImportClientEntityDef(stream);
+    }
+
+    OnImportClientEntityDef(stream: MemoryStream)
+    {
+        this.CreateAllDataTypeFromStream(stream);
+        return;
+        
+        while(!stream.ReadEOF())
+        {
+            let scriptmodule_name = stream.ReadString();
+			let scriptUtype = stream.ReadUint16();
+			let propertysize = stream.ReadUint16();
+			let methodsize = stream.ReadUint16();
+			let base_methodsize = stream.ReadUint16();
+			let cell_methodsize = stream.ReadUint16();
+			
+			KBEDebug.INFO_MSG("KBEngineApp::Client_onImportClientEntityDef: import(" + scriptmodule_name + "), propertys(" + propertysize + "), " +
+					"clientMethods(" + methodsize + "), baseMethods(" + base_methodsize + "), cellMethods(" + cell_methodsize + ")!");
+        }
+    }
+
+    private CreateAllDataTypeFromStream(stream: MemoryStream)
+    {
+        let aliasSize = stream.ReadUint16();
+        KBEDebug.INFO_MSG("KBEngineApp::createDataTypeFromStreams: importAlias(size=" + aliasSize + ")!");
+
+        while(aliasSize-- > 0)
+        {
+            this.CreateDataTypeFromStream(stream);
+        }
+
+        for(let dataType in DataTypes.datatypes)
+        {
+            if(DataTypes.datatypes[dataType] != undefined)
+            {
+                DataTypes.datatypes[dataType].Bind();
+            }
+        }
+    }
+
+    private CreateDataTypeFromStream(stream: MemoryStream)
+    {
+        //KBEDebug.DEBUG_MSG("CreateDataTypeFromStream------------------->>>");
+        let utype = stream.ReadUint16();
+        let name = stream.ReadString();
+        let valname = stream.ReadString();
+        if(valname.length === 0)
+        {
+            valname = "Null_" + utype;
+        }
+        KBEDebug.INFO_MSG("KBEngineApp::CreateDataTypeFromStream: importAlias(" + utype + ":" + name + ":" + valname + ")!");
+
+        if(name === "FIXED_DICT")
+        {
+            let datatype = new DataTypes.DATATYPE_FIXED_DICT();
+            let keysize = stream.ReadUint8();
+            datatype.implementedBy = stream.ReadString();
+
+            while(keysize-- > 0)
+            {
+                let keyname = stream.ReadString();
+                let keyutype = stream.ReadUint16();
+                //KBEDebug.DEBUG_MSG("CreateDataTypeFromStream------------------->>>FIXED_DICT(valname:%s):keyutype:%d, keyname:%s", valname, keyutype, keyname);
+                datatype.dictType[keyname] = keyutype;
+            }
+            
+            DataTypes.datatypes[valname] = datatype;
+        }
+        else if(name === "ARRAY")
+        {
+            let itemutype = stream.ReadUint16();
+            let datatype = new DataTypes.DATATYPE_ARRAY();
+            datatype.type = itemutype;
+            DataTypes.datatypes[valname] = datatype;
+
+            //KBEDebug.DEBUG_MSG("CreateDataTypeFromStream------------------->>>ARRAY(valname:%s), itemutype:%d.", valname, itemutype);
+        }
+        else
+        {
+            DataTypes.datatypes[valname] = DataTypes.datatypes[name];
+        }
+
+        DataTypes.datatypes[utype] = DataTypes.datatypes[valname];
     }
 }
