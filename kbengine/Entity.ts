@@ -9,7 +9,7 @@
 //  - [English] http://www.cocos2d-x.org/docs/creator/manual/en/scripting/life-cycle-callbacks.html
 
 
-export class Entity
+export default class Entity
 {
     Name: string = "wsf";
 }
