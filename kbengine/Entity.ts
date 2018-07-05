@@ -11,6 +11,8 @@
 
 export default class Entity
 {
+    static SCRIPT_NAME = "Entity";
+    
     Name: string = "wsf";
 }
 

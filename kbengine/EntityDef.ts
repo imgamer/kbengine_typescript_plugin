@@ -1,4 +1,7 @@
 import {DATATYPE_BASE} from "./DataTypes";
+import Entity from "./Entity";
+import KBEDebug from "./KBEDebug";
+import * as ExportEntity from "./../entities/ExportEntity";
 
 enum EntityDataFlags
 {
@@ -18,27 +21,28 @@ export class Property
     name: string = "";
     utype: DATATYPE_BASE = undefined;
     properUtype: number = 0;
-    properFlags: number = 0;
+    flags: number = 0;
     aliasID: number = -1;
 
     defaultValStr: string = "";
-    handler: Function = undefined;
+    setHandler: Function = undefined;
+    value: any = undefined;
 
     IsBase(): boolean
     {
-        return this.properFlags === EntityDataFlags.ED_FLAG_BASE_AND_CLIENT || 
-                this.properFlags === EntityDataFlags.ED_FLAG_BASE;
+        return this.flags === EntityDataFlags.ED_FLAG_BASE_AND_CLIENT || 
+                this.flags === EntityDataFlags.ED_FLAG_BASE;
     }
 
     IsOwnerOnly(): boolean
     {
-        return this.properFlags === EntityDataFlags.ED_FLAG_CELL_PUBLIC_AND_OWN || 
-                this.properFlags === EntityDataFlags.ED_FLAG_OWN_CLIENT;
+        return this.flags === EntityDataFlags.ED_FLAG_CELL_PUBLIC_AND_OWN || 
+                this.flags === EntityDataFlags.ED_FLAG_OWN_CLIENT;
     }
 
     IsOtherOnly(): boolean
     {
-        return this.properFlags === EntityDataFlags.ED_FLAG_OTHER_CLIENTS;
+        return this.flags === EntityDataFlags.ED_FLAG_OTHER_CLIENTS;
     }
 }
 
@@ -56,6 +60,7 @@ export class ScriptModule
     name: string = "";
     usePropertyDescrAlias: boolean = false;
     useMethodDescrAlias: boolean = false;
+    script: any;
 
     propertys = {};
     methods = {};
@@ -64,17 +69,38 @@ export class ScriptModule
 
     constructor(moduleName: string)
     {
-        this.name = moduleName;
+        this.script = ExportEntity.GetEntityScript(moduleName);
+        if(this.script === undefined)
+        {
+            //throw(Error("ScriptModule::cant find script:" + moduleName));
+        }
+    }
 
-        // TODO: 动态加载对应名字的entity模块
+    async AsyncInit(moduleName: string)
+    {
+        this.name = moduleName;
+        let module: any = undefined;
+        let path: string = "../../kbengine_typescript_plugin/kbengine/Entity";
+        KBEDebug.INFO_MSG("ScriptModule::AsyncInit:try to load script %s.", path);
+        try
+        {
+            module = await import(path);
+            //module = await import("../entities/Account");
+        }
+        catch(e)
+        {
+            KBEDebug.ERROR_MSG("ScriptModule::AsyncInit:can't load(Entity script:%s,error:%s!", moduleName, e);
+        }
+        
+        this.script = module.default;
+        KBEDebug.INFO_MSG("ScriptModule::AsyncInit:load script %s.", this.script);
     }
 }
 
-
-export var moduleDefs = {}
+export var MODULE_DEFS = {}
 export function Clear()
 {
-    moduleDefs = {};
+    MODULE_DEFS = {};
 }
 
 class EntityDef

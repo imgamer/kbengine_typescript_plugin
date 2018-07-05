@@ -7,6 +7,9 @@ import Bundle from "./Bundle";
 import MemoryStream from "./MemoryStream";
 import {UTF8ArrayToString} from "./KBEEncoding";
 import * as DataTypes from "./DataTypes";
+import * as EntityDef from "./EntityDef";
+
+import Entity from "./Entity";
 
 export class KBEngineArgs
 {
@@ -496,10 +499,9 @@ export class KBEngineApp
         this.OnImportClientEntityDef(stream);
     }
 
-    OnImportClientEntityDef(stream: MemoryStream)
+    async OnImportClientEntityDef(stream: MemoryStream)
     {
         this.CreateAllDataTypeFromStream(stream);
-        return;
         
         while(!stream.ReadEOF())
         {
@@ -510,9 +512,171 @@ export class KBEngineApp
 			let base_methodsize = stream.ReadUint16();
 			let cell_methodsize = stream.ReadUint16();
 			
-			KBEDebug.INFO_MSG("KBEngineApp::Client_onImportClientEntityDef: import(" + scriptmodule_name + "), propertys(" + propertysize + "), " +
-					"clientMethods(" + methodsize + "), baseMethods(" + base_methodsize + "), cellMethods(" + cell_methodsize + ")!");
+			KBEDebug.INFO_MSG("KBEngineApp::OnImportClientEntityDef: import(" + scriptmodule_name + "), propertys(" + propertysize + "), " +
+                    "clientMethods(" + methodsize + "), baseMethods(" + base_methodsize + "), cellMethods(" + cell_methodsize + ")!");
+
+            let module:EntityDef.ScriptModule = new EntityDef.ScriptModule(scriptmodule_name);
+            if(module.script === undefined)
+                KBEDebug.ERROR_MSG("KBEngineApp::OnImportClientEntityDef: module(" + scriptmodule_name + ") not found!");
+
+            EntityDef.MODULE_DEFS[scriptmodule_name] = module;
+            EntityDef.MODULE_DEFS[scriptUtype] = module;
+
+            if (propertysize > 255)
+                 module.usePropertyDescrAlias = false;
+            else
+                 module.usePropertyDescrAlias = true;
+
+            while(propertysize > 0)
+            {
+                propertysize--;
+
+                let propertyUtype = stream.ReadUint16();
+                let propertyFlags = stream.ReadUint32();
+                let aliasID = stream.ReadInt16();
+                let name = stream.ReadString();
+                let defaultValStr = stream.ReadString();
+                let utype = DataTypes.datatypes[stream.ReadUint16()];
+
+                let setHandler: Function = undefined;
+                if(module.script !== undefined)
+                {
+                    setHandler = module["set_"+name];
+                }
+
+                let property: EntityDef.Property = new EntityDef.Property();
+                property.name = name;
+                property.utype = utype;
+                property.properUtype = propertyUtype;
+                property.flags = propertyFlags;
+                property.aliasID = aliasID;
+                property.defaultValStr = defaultValStr;
+                property.setHandler = setHandler;
+                property.value = property.utype.ParseDefaultValueString(defaultValStr);
+
+                KBEDebug.DEBUG_MSG("KBEngineApp::OnImportClientEntityDef:import property: name(%s), propertyUtype(%d), flags(%d), aliasID(%d), defaultValStr(%s), defaultVal(%s), utype(%d).",
+                                     name, propertyUtype, propertyFlags, aliasID, defaultValStr, property.value, utype);
+                
+                module.propertys[name] = property;
+                if(module.usePropertyDescrAlias)
+                    module.propertys[aliasID] = property;
+                else
+                    module.propertys[propertyUtype] = property;
+            }
+
+            if(methodsize > 255)
+                module.useMethodDescrAlias = true;
+            else
+                module.useMethodDescrAlias = false;
+
+            while(methodsize > 0)
+            {
+                methodsize--;
+
+                let methodUtype = stream.ReadUint16();
+                let aliasID = stream.ReadInt16();
+                let name = stream.ReadString();
+                let argssize = stream.ReadUint8();
+                let args: Array<DataTypes.DATATYPE_BASE> = new Array<DataTypes.DATATYPE_BASE>();
+
+                KBEDebug.DEBUG_MSG("KBEngineApp::OnImportClientEntityDef:import method:%s, args(%d).", name, argssize);
+                while(argssize > 0)
+                {
+                    argssize--;
+                    let utype = stream.ReadUint16();
+                    args.push(DataTypes.datatypes[utype])
+                }
+
+                let method: EntityDef.Method = new EntityDef.Method();
+                method.name = name;
+                method.methodUtype = methodUtype;
+                method.aliasID = aliasID;
+                method.args = args;
+
+                if(module.script !== undefined)
+                {
+                    method.handler = module.script[name];
+                    if(method.handler === undefined)
+                    {
+                        KBEDebug.ERROR_MSG("KBEngineApp::OnImportClientEntityDef:can not find def method:%s.", name);
+                    }
+                }
+
+                module.methods[name] = method;
+                if(module.useMethodDescrAlias)
+                    module.methods[aliasID] = method;
+                else
+                    module.methods[methodUtype] = method;
+            }
+
+            while(base_methodsize > 0)
+            {
+                base_methodsize--;
+
+                let methodUtype = stream.ReadUint16();
+                let aliasID = stream.ReadInt16();
+                let name = stream.ReadString();
+                let argssize = stream.ReadUint8();
+                let args: Array<DataTypes.DATATYPE_BASE> = new Array<DataTypes.DATATYPE_BASE>();
+
+                KBEDebug.DEBUG_MSG("KBEngineApp::OnImportClientEntityDef:import base method:%s, args(%d).", name, argssize);
+                while(argssize > 0)
+                {
+                    argssize--;
+                    let utype = stream.ReadUint16();
+                    args.push(DataTypes.datatypes[utype])
+                }
+
+                let method: EntityDef.Method = new EntityDef.Method();
+                method.name = name;
+                method.methodUtype = methodUtype;
+                method.aliasID = aliasID;
+                method.args = args;
+
+                module.baseMethods[name] = method;
+                module.baseMethods[methodUtype] = method;
+            }
+
+            while(cell_methodsize > 0)
+            {
+                
+                cell_methodsize--;
+
+                let methodUtype = stream.ReadUint16();
+                let aliasID = stream.ReadInt16();
+                let name = stream.ReadString();
+                let argssize = stream.ReadUint8();
+                let args: Array<DataTypes.DATATYPE_BASE> = new Array<DataTypes.DATATYPE_BASE>();
+
+                KBEDebug.DEBUG_MSG("KBEngineApp::OnImportClientEntityDef:import cell method:%s, args(%d).", name, argssize);
+
+                while(argssize > 0)
+                {
+                    argssize--;
+                    let utype = stream.ReadUint16();
+                    args.push(DataTypes.datatypes[utype])
+                }
+
+                let method: EntityDef.Method = new EntityDef.Method();
+                method.name = name;
+                method.methodUtype = methodUtype;
+                method.aliasID = aliasID;
+                method.args = args;
+
+                module.cellMethods[name] = method;
+                module.cellMethods[methodUtype] = method;
+            }
+
+            for(let name in module.methods)
+            {
+                if(module.script !== undefined && module.script[name] === undefined)
+                {
+                    KBEDebug.WARNING_MSG("Entity def %s::mehod(%s) no implement!", scriptmodule_name, name);
+                }
+            }
         }
+
+        this.onImportEntityDefCompleted();
     }
 
     private CreateAllDataTypeFromStream(stream: MemoryStream)
