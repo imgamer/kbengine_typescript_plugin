@@ -742,4 +742,22 @@ export class KBEngineApp
 
         DataTypes.datatypes[utype] = DataTypes.datatypes[valname];
     }
+
+    Client_onUpdatePropertys(stream: MemoryStream)
+    {
+        let eid = stream.ReadInt32();
+        KBEDebug.DEBUG_MSG("Client_onUpdatePropertys------------------->>>eid:%s.", eid);
+        this.OnUpdatePropertys_(eid, stream);
+    }
+
+    OnUpdatePropertys_(eid: number, stream: MemoryStream)
+    {
+
+    }
+
+    Client_onCreatedProxies(rndUUID: DataTypes.UINT64, eid: number, entityType: string)
+    {
+        KBEDebug.INFO_MSG("KBEngineApp::Client_onCreatedProxies: uuid:(%s) eid(%d), entityType(%s)!", rndUUID.toString(), eid, entityType);
+        
+    }
 }
