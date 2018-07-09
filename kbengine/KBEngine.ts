@@ -71,10 +71,13 @@ export class KBEngineApp
     private lastTickTime: number = 0;
     private lastTickCBTime: number = 0;
 
+    entities: {[id:number]: Entity} = {};
+    entity_id: number = 0;
+
     private static _app: KBEngineApp = undefined;
     static get app()
     {
-        return KBEngineApp._app;    // 如果外部使用者因为访问到null出错，表示需要先Create
+        return KBEngineApp._app;    // 如果外部使用者因为访问到undefined出错，表示需要先Create
     }
 
     static Create(args: KBEngineArgs): KBEngineApp
@@ -747,10 +750,10 @@ export class KBEngineApp
     {
         let eid = stream.ReadInt32();
         KBEDebug.DEBUG_MSG("Client_onUpdatePropertys------------------->>>eid:%s.", eid);
-        this.OnUpdatePropertys_(eid, stream);
+        this.OnUpdatePropertys(eid, stream);
     }
 
-    OnUpdatePropertys_(eid: number, stream: MemoryStream)
+    OnUpdatePropertys(eid: number, stream: MemoryStream)
     {
 
     }

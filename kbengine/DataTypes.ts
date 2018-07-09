@@ -1,5 +1,6 @@
 
 import MemoryStream from "./MemoryStream";
+import Bundle from "./Bundle";
 import * as KBEMath from "./KBEMath";
 import * as KBEEncoding from "./KBEEncoding";
 
@@ -99,7 +100,7 @@ export abstract class DATATYPE_BASE
     {}
 
     abstract CreateFromStream(stream: MemoryStream): any;
-    abstract AddToStream(stream: MemoryStream, value: any): void;
+    abstract AddToStream(stream: Bundle, value: any): void;
     abstract ParseDefaultValueString(value: string): any;
     abstract IsSameType(value: any): boolean;
 }
@@ -111,7 +112,7 @@ export class DATATYPE_UINT8 extends DATATYPE_BASE
         return stream.ReadUint8();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         return stream.WriteUint8(value);
     }
@@ -142,7 +143,7 @@ export class DATATYPE_UINT16 extends DATATYPE_BASE
         return stream.ReadUint16();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         return stream.WriteUint16(value);
     }
@@ -173,7 +174,7 @@ export class DATATYPE_UINT32 extends DATATYPE_BASE
         return stream.ReadUint32();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         return stream.WriteUint32(value);
     }
@@ -204,7 +205,7 @@ export class DATATYPE_UINT64 extends DATATYPE_BASE
         return stream.ReadUint64();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         return stream.WriteUint64(value);
     }
@@ -227,7 +228,7 @@ export class DATATYPE_INT8 extends DATATYPE_BASE
         return stream.ReadInt8();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         return stream.WriteInt8(value);
     }
@@ -258,7 +259,7 @@ export class DATATYPE_INT16 extends DATATYPE_BASE
         return stream.ReadInt16();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         return stream.WriteInt16(value);
     }
@@ -289,7 +290,7 @@ export class DATATYPE_INT32 extends DATATYPE_BASE
         return stream.ReadInt32();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         return stream.WriteInt32(value);
     }
@@ -320,7 +321,7 @@ export class DATATYPE_INT64 extends DATATYPE_BASE
         return stream.ReadInt64();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         return stream.WriteInt64(value);
     }
@@ -343,7 +344,7 @@ export class DATATYPE_FLOAT extends DATATYPE_BASE
         return stream.ReadFloat();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         return stream.WriteFloat(value);
     }
@@ -366,7 +367,7 @@ export class DATATYPE_DOUBLE extends DATATYPE_BASE
         return stream.ReadDouble();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         return stream.WriteDouble(value);
     }
@@ -389,7 +390,7 @@ export class DATATYPE_STRING extends DATATYPE_BASE
         return stream.ReadString();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         return stream.WriteString(value);
     }
@@ -412,7 +413,7 @@ export class DATATYPE_VECTOR2 extends DATATYPE_BASE
         return new KBEMath.Vector2(stream.ReadFloat(), stream.ReadFloat());
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         stream.WriteFloat(value.x);
         stream.WriteFloat(value.y);
@@ -436,7 +437,7 @@ export class DATATYPE_VECTOR3 extends DATATYPE_BASE
         return new KBEMath.Vector3(stream.ReadFloat(), stream.ReadFloat(), stream.ReadFloat());
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         stream.WriteFloat(value.x);
         stream.WriteFloat(value.y);
@@ -461,7 +462,7 @@ export class DATATYPE_VECTOR4 extends DATATYPE_BASE
         return new KBEMath.Vector4(stream.ReadFloat(), stream.ReadFloat(), stream.ReadFloat(), stream.ReadFloat());
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         stream.WriteFloat(value.x);
         stream.WriteFloat(value.y);
@@ -488,7 +489,7 @@ export class DATATYPE_PYTHON extends DATATYPE_BASE
         return stream.ReadBlob();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         stream.WriteBlob(value);
     }
@@ -511,7 +512,7 @@ export class DATATYPE_UNICODE extends DATATYPE_BASE
         return KBEEncoding.UTF8ArrayToString(stream.ReadBlob());
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         stream.WriteBlob(KBEEncoding.StringToUTF8Array(value));
     }
@@ -533,7 +534,7 @@ export class DATATYPE_MAILBOX extends DATATYPE_BASE
     {
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         stream.WriteBlob(value);
     }
@@ -555,7 +556,7 @@ export class DATATYPE_BLOB extends DATATYPE_BASE
         return stream.ReadBlob();
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         stream.WriteBlob(value);
     }
@@ -593,7 +594,7 @@ export class DATATYPE_ARRAY extends DATATYPE_BASE
         return items;
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         stream.WriteUint32(value.length);
         for(let i = 0; i < value.length; i++)
@@ -646,7 +647,7 @@ export class DATATYPE_FIXED_DICT extends DATATYPE_BASE
         return datas;
     }
 
-    AddToStream(stream: MemoryStream, value: any): void
+    AddToStream(stream: Bundle, value: any): void
     {
         for(let key in this.dictType)
         {

@@ -1,7 +1,10 @@
 
 import Entity from "../kbengine/Entity";
+import {RegisterScript} from "./ExportEntity";
 
 export default class Account extends Entity
 {
-    static SCRIPT_NAME = "Account";
+    static className = "Account";
 }
+
+RegisterScript(Account);
