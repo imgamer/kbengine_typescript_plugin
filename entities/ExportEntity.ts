@@ -8,7 +8,7 @@ var EntityScripts = {};
 
 export function RegisterScript(script: any)
 {
-    EntityScripts[script.className] = script;
+    EntityScripts[script.SCRIPT_NAME] = script;
 }
 
 export function GetEntityScript(name: string)

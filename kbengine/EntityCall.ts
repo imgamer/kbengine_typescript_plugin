@@ -14,7 +14,7 @@ export abstract class EntityCall
         this.networkInterface = networkInterface;
     }
 
-    SendCall(bundle: Bundle)
+    SendCall(bundle?: Bundle)
     {
         KBEDebug.ASSERT(this.bundle !== undefined);
 

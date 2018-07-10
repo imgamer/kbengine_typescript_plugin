@@ -95,6 +95,17 @@ export class ScriptModule
         this.script = module.default;
         KBEDebug.INFO_MSG("ScriptModule::AsyncInit:load script %s.", this.script);
     }
+
+    GetScriptSetMethod(name: string)
+    {
+        if(this.script === undefined)
+        {
+            KBEDebug.INFO_MSG("ScriptModule::GetScriptSetMethod(name:%s):script(%s) is undefined.", name, this.name);
+            return undefined;
+        }
+
+        return this.script.prototype["set_" + name];
+    }
 }
 
 export var MODULE_DEFS = {}

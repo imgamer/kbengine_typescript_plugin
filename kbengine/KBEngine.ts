@@ -10,6 +10,8 @@ import * as DataTypes from "./DataTypes";
 import * as EntityDef from "./EntityDef";
 
 import Entity from "./Entity";
+import { UINT64 } from "../../../code/DataTypes";
+import { BaseEntityCall, CellEntityCall } from "./EntityCall";
 
 export class KBEngineArgs
 {
@@ -72,7 +74,11 @@ export class KBEngineApp
     private lastTickCBTime: number = 0;
 
     entities: {[id:number]: Entity} = {};
+    bufferedCreateEntityMessage: {[id:number]: MemoryStream} = {};
     entity_id: number = 0;
+    entity_uuid: UINT64;
+
+    isOnInitCallPropertysSetMethods = true;
 
     private static _app: KBEngineApp = undefined;
     static get app()
@@ -134,7 +140,7 @@ export class KBEngineApp
     {
         if(!this.networkInterface.IsGood)
         {
-            KBEDebug.DEBUG_MSG("KBEngineApp::SendTick...this.networkInterface.IsGood noooooooooo.");
+            KBEDebug.DEBUG_MSG("KBEngineApp::SendTick...this.networkInterface is not ready.");
             return;
         }
         
@@ -522,6 +528,7 @@ export class KBEngineApp
             if(module.script === undefined)
                 KBEDebug.ERROR_MSG("KBEngineApp::OnImportClientEntityDef: module(" + scriptmodule_name + ") not found!");
 
+            module.name = scriptmodule_name;
             EntityDef.MODULE_DEFS[scriptmodule_name] = module;
             EntityDef.MODULE_DEFS[scriptUtype] = module;
 
@@ -544,7 +551,12 @@ export class KBEngineApp
                 let setHandler: Function = undefined;
                 if(module.script !== undefined)
                 {
-                    setHandler = module["set_"+name];
+                    setHandler = module.GetScriptSetMethod(name);
+                }
+                
+                if(scriptmodule_name === "Account")
+                {
+                    KBEDebug.ERROR_MSG("KBEngineApp::OnImportClientEntityDef: Account module property(%s)'s handler(%s).", name, setHandler);
                 }
 
                 let property: EntityDef.Property = new EntityDef.Property();
@@ -755,12 +767,103 @@ export class KBEngineApp
 
     OnUpdatePropertys(eid: number, stream: MemoryStream)
     {
+        let entity = this.entities[eid];
+        if(entity === undefined)
+        {
+            let entityStream = this.bufferedCreateEntityMessage[eid];
+            if(entityStream !== undefined)
+            {
+                KBEDebug.ERROR_MSG("KBEngineApp::OnUpdatePropertys: entity(%i) not found.", eid);
+                return;
+            }
 
+            let tempStream = new MemoryStream(stream.GetRawBuffer());
+            tempStream.wpos = stream.wpos;
+            tempStream.rpos = stream.rpos - 4;
+            this.bufferedCreateEntityMessage[eid] = tempStream;
+            return;
+        }
+        
+        let module: EntityDef.ScriptModule = EntityDef.MODULE_DEFS[entity.className];
+        while(stream.Length() > 0)
+        {
+            let utype = 0;
+            if(module.usePropertyDescrAlias)
+                utype = stream.ReadUint8();
+            else
+                utype = stream.ReadUint16();
+
+            let propertyData: EntityDef.Property = module.propertys[utype];
+            let val = propertyData.utype.CreateFromStream(stream);
+            let oldval = entity[propertyData.name];
+            KBEDebug.INFO_MSG("KBEngineApp::OnUpdatePropertys: entity %s(id:%d, name:%s change oldval(%s) to val(%s), IsBase(%s),inited(%s), handler(%s).", 
+                                entity.className, eid, propertyData.name, oldval, val, propertyData.IsBase(), entity.inited, propertyData.setHandler);
+
+            entity[propertyData.name] = val;
+
+            // 触发set_*方法
+            if(propertyData.setHandler !== undefined)
+            {
+                if(propertyData.IsBase())
+                {
+                    if(entity.inited)
+                        propertyData.setHandler.call(entity, oldval);
+                }
+                else
+                {
+                    if(entity.inWord)
+                        propertyData.setHandler.call(entity, oldval);
+                }
+            }
+        }
     }
 
     Client_onCreatedProxies(rndUUID: DataTypes.UINT64, eid: number, entityType: string)
     {
         KBEDebug.INFO_MSG("KBEngineApp::Client_onCreatedProxies: uuid:(%s) eid(%d), entityType(%s)!", rndUUID.toString(), eid, entityType);
+        this.entity_uuid = rndUUID;
+        this.entity_id = eid;
         
+        let entity = this.entities[eid];
+        if(entity === undefined)
+        {
+            KBEDebug.DEBUG_MSG("Client_onCreatedProxies------------------->>>1111eid:%s.", eid);
+            let scriptModule: EntityDef.ScriptModule = EntityDef.MODULE_DEFS[entityType];
+            if(scriptModule === undefined)
+            {
+                KBEDebug.ERROR_MSG("KBEngineApp::Client_onCreatedProxies:script(%s) is undefined.", entityType);
+                return;
+            }
+
+            let entity: Entity = new scriptModule.script();
+            entity.id = eid;
+            entity.className = entityType;
+            entity.base = new BaseEntityCall(this.networkInterface);
+            entity.base.id = eid;
+
+            this.entities[eid] = entity;
+
+            let entityStream = this.bufferedCreateEntityMessage[eid];
+            if(entityStream !== undefined)
+            {
+                this.Client_onUpdatePropertys(entityStream);
+                delete this.bufferedCreateEntityMessage[eid];
+            }
+
+            entity.__init__();
+
+            if(this.args.isOnInitCallPropertysSetMethods)
+                entity.CallPropertysSetMethods();
+        }
+        else
+        {
+            KBEDebug.DEBUG_MSG("Client_onCreatedProxies------------------->>>2222eid:%s.", eid);
+            let entityStream = this.bufferedCreateEntityMessage[eid];
+            if(entityStream !== undefined)
+            {
+                this.Client_onUpdatePropertys(entityStream);
+                delete this.bufferedCreateEntityMessage[eid];
+            }
+        }
     }
 }
