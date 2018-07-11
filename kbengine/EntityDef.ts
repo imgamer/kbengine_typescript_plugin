@@ -98,13 +98,18 @@ export class ScriptModule
 
     GetScriptSetMethod(name: string)
     {
+        return this.GetScriptMethod("set_" + name);
+    }
+
+    GetScriptMethod(name: string)
+    {
         if(this.script === undefined)
         {
-            KBEDebug.INFO_MSG("ScriptModule::GetScriptSetMethod(name:%s):script(%s) is undefined.", name, this.name);
+            KBEDebug.INFO_MSG("ScriptModule::GetScriptMethod(name:%s):script(%s) is undefined.", name, this.name);
             return undefined;
         }
 
-        return this.script.prototype["set_" + name];
+        return this.script.prototype[name];
     }
 }
 

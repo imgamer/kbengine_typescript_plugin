@@ -583,9 +583,9 @@ export class KBEngineApp
             }
 
             if(methodsize > 255)
-                module.useMethodDescrAlias = true;
-            else
                 module.useMethodDescrAlias = false;
+            else
+                module.useMethodDescrAlias = true;
 
             while(methodsize > 0)
             {
@@ -597,7 +597,7 @@ export class KBEngineApp
                 let argssize = stream.ReadUint8();
                 let args: Array<DataTypes.DATATYPE_BASE> = new Array<DataTypes.DATATYPE_BASE>();
 
-                KBEDebug.DEBUG_MSG("KBEngineApp::OnImportClientEntityDef:import method:%s, args(%d).", name, argssize);
+                KBEDebug.DEBUG_MSG("KBEngineApp::OnImportClientEntityDef:import method:%s, utype(%d), aliasID(%d), args(%d).", name, methodUtype, aliasID, argssize);
                 while(argssize > 0)
                 {
                     argssize--;
@@ -613,7 +613,7 @@ export class KBEngineApp
 
                 if(module.script !== undefined)
                 {
-                    method.handler = module.script[name];
+                    method.handler = module.GetScriptMethod(name);
                     if(method.handler === undefined)
                     {
                         KBEDebug.ERROR_MSG("KBEngineApp::OnImportClientEntityDef:can not find def method:%s.", name);
@@ -868,5 +868,53 @@ export class KBEngineApp
                 delete this.bufferedCreateEntityMessage[eid];
             }
         }
+    }
+
+    OnRemoteMethodCall(eid: number, stream: MemoryStream)
+    {
+        let entity = this.entities[eid];
+        if(entity === undefined)
+        {
+            KBEDebug.ERROR_MSG("KBEngineApp::Client_onRemoteMethodCall: entity(%d) not found!", eid);
+            return;
+        }
+        
+        let scriptModule: EntityDef.ScriptModule = EntityDef.MODULE_DEFS[entity.className];
+        let methodUtype: number = 0;
+        if(scriptModule.useMethodDescrAlias)
+            methodUtype = stream.ReadUint8();
+        else
+            methodUtype = stream.ReadUint16();
+
+        KBEDebug.DEBUG_MSG("KBEngineApp::OnRemoteMethodCall: methodUtype(%d), use alias(%s).", 
+                            methodUtype, scriptModule.useMethodDescrAlias);
+                            
+        let defMethod: EntityDef.Method = scriptModule.methods[methodUtype];
+
+        let args = [];
+        for(let i = 0; i< defMethod.args.length; i++)
+        {
+            args.push(defMethod.args[i].CreateFromStream(stream));
+        }
+        
+        if(entity[defMethod.name] !== undefined)
+        {
+            entity[defMethod.name].apply(entity, args);
+        }
+        else
+        {
+            KBEDebug.ERROR_MSG("KBEngineApp::Client_onRemoteMethodCall: entity(%d) not found method(%s)!", eid, defMethod.name);
+        }
+    }
+
+    Client_onRemoteMethodCall(stream: MemoryStream)
+    {
+        let eid = stream.ReadUint32();
+        this.OnRemoteMethodCall(eid, stream);
+    }
+
+    Client_onRemoteMethodCallOptimized(stream: MemoryStream)
+    {
+
     }
 }
