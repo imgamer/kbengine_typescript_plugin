@@ -22,6 +22,7 @@ export default class Entity
     className: string;
 
     parentID: number;
+    parent: Entity;
 
     position: KBEMath.Vector3 = new KBEMath.Vector3(0, 0, 0);
     direction: KBEMath.Vector3 = new KBEMath.Vector3(0, 0, 0);
@@ -241,6 +242,14 @@ export default class Entity
     {
         // TODO:...
         this.OnDestroy();
+    }
+
+    SetParent(ent: Entity)
+    {
+        if(ent == this.parent)
+            return;
+        
+        // TODO:...
     }
 }
 

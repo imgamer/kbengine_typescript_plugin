@@ -252,6 +252,18 @@ export class KBEngineApp
         this.lastTickCBTime = (new Date()).getTime();
     }
 
+		
+    // 设置新密码，通过baseapp， 必须玩家登录在线操作所以是baseapp。
+    NewPassword(old_password: string, new_password: string)
+    {
+        let bundle = new Bundle();
+        bundle.NewMessage(Message.messages["Baseapp_reqAccountNewPassword"]);
+        bundle.WriteInt32(this.entity_id);
+        bundle.WriteString(old_password);
+        bundle.WriteString(new_password);
+        bundle.Send(this.networkInterface);
+    }
+
     Client_onImportClientMessages(stream: MemoryStream)
     {
         this.OnImportClientMessages(stream);
@@ -463,7 +475,65 @@ export class KBEngineApp
 
     private UpdatePlayerToServer()
     {
-        //KBEDebug.DEBUG_MSG("KBEngine::UpdatePlayerToServer.........");
+		let player = this.Player();
+		if(player == undefined || player.inWorld == false || this.spaceID === 0 || player.isControlled)
+            return;
+            
+        if(player.entityLastLocalPos.Distance(player.position) > 0.001 || player.entityLastLocalDir.Distance(player.direction) > 0.001)
+        {
+            // 记录玩家最后一次上报位置时自身当前的位置
+            player.entityLastLocalPos.x = player.position.x;
+            player.entityLastLocalPos.y = player.position.y;
+            player.entityLastLocalPos.z = player.position.z;
+            player.entityLastLocalDir.x = player.direction.x;
+            player.entityLastLocalDir.y = player.direction.y;
+            player.entityLastLocalDir.z = player.direction.z;	
+                            
+            let bundle = new Bundle();
+            bundle.NewMessage(Message.messages["Baseapp_onUpdateDataFromClient"]);
+            bundle.WriteFloat(player.position.x);
+            bundle.WriteFloat(player.position.y);
+            bundle.WriteFloat(player.position.z);
+            bundle.WriteFloat(player.direction.x);
+            bundle.WriteFloat(player.direction.y);
+            bundle.WriteFloat(player.direction.z);
+
+            let isOnGound = player.isOnGround ? 1 : 0;
+            bundle.WriteUint8(isOnGound);
+            bundle.WriteUint32(this.spaceID);
+            bundle.Send(this.networkInterface);
+        }
+        
+        // 开始同步所有被控制了的entity的位置
+        for (let entity of this.controlledEntities)  
+        { 
+            let position = entity.position;
+            let direction = entity.direction;
+
+            let posHasChanged = entity.entityLastLocalPos.Distance(position) > 0.001;
+            let dirHasChanged = entity.entityLastLocalDir.Distance(direction) > 0.001;
+            if (posHasChanged || dirHasChanged)
+            {
+                entity.entityLastLocalPos = position;
+                entity.entityLastLocalDir = direction;
+
+                let bundle = new Bundle();
+                bundle.NewMessage(Message.messages["Baseapp_onUpdateDataFromClientForControlledEntity"]);
+                bundle.WriteInt32(entity.id);
+                bundle.WriteFloat(position.x);
+                bundle.WriteFloat(position.y);
+                bundle.WriteFloat(position.z);
+
+                bundle.WriteFloat(direction.x);
+                bundle.WriteFloat(direction.y);
+                bundle.WriteFloat(direction.z);
+
+                let isOnGound = player.isOnGround ? 1 : 0;
+                bundle.WriteUint8(isOnGound);
+                bundle.WriteUint32(this.spaceID);
+                bundle.Send(this.networkInterface);
+            }
+        }
     }
 
     Client_onLoginFailed(stream: MemoryStream)
@@ -597,11 +667,6 @@ export class KBEngineApp
                 {
                     setHandler = module.GetScriptSetMethod(name);
                 }
-                
-                if(scriptmodule_name === "Account")
-                {
-                    KBEDebug.ERROR_MSG("KBEngineApp::OnImportClientEntityDef: Account module property(%s)'s handler(%s).", name, setHandler);
-                }
 
                 let property: EntityDef.Property = new EntityDef.Property();
                 property.name = name;
@@ -728,6 +793,9 @@ export class KBEngineApp
 
             for(let name in module.methods)
             {
+                if(Number(name) >= 0)
+                    continue;
+
                 if(module.script !== undefined && module.script[name] === undefined)
                 {
                     KBEDebug.WARNING_MSG("Entity def %s::mehod(%s) no implement!", scriptmodule_name, name);
@@ -800,6 +868,14 @@ export class KBEngineApp
         }
 
         DataTypes.datatypes[utype] = DataTypes.datatypes[valname];
+    }
+
+
+    // 服务端使用优化的方式更新实体属性数据
+    Client_onUpdatePropertysOptimized(stream: MemoryStream)
+    {
+        let eid = this.GetViewEntityIDFromStream(stream);
+        this.OnUpdatePropertys(eid, stream);
     }
 
     Client_onUpdatePropertys(stream: MemoryStream)
@@ -1058,6 +1134,12 @@ export class KBEngineApp
             }
         }
     }
+    
+    Client_onEntityLeaveWorldOptimized(stream: MemoryStream)
+    {
+        let eid = this.GetViewEntityIDFromStream(stream);
+        this.Client_onEntityLeaveWorld(eid);
+    }
 
     Client_onEntityLeaveWorld(eid: number)
     {
@@ -1121,6 +1203,14 @@ export class KBEngineApp
         KBEEvent.Fire("onSetSpaceData", spaceID, key, value);
     }
 
+	// 服务端删除客户端的spacedata， spacedata请参考API
+    Client_delSpaceData(spaceID: number, key: string)
+    {
+        KBEDebug.DEBUG_MSG("KBEngine::Client_delSpaceData: spaceID(" + spaceID + "), key(" + key + ")");
+        delete this.spacedata[key];
+        KBEEvent.Fire("onDelSpaceData", spaceID, key);
+    }
+
     Client_onEntityEnterSpace(stream: MemoryStream)
     {
         let eid = stream.ReadInt32();
@@ -1167,12 +1257,12 @@ export class KBEngineApp
     {
         this.entityIDAliasIDList = [];
         this.spacedata = {};
-        this.clearEntities(isAll);
+        this.ClearEntities(isAll);
         this.isLoadedGeometry = false;
         this.spaceID = 0;
     }
 
-    clearEntities(isAll: boolean)
+    ClearEntities(isAll: boolean)
     {
         this.controlledEntities = [];
         if(!isAll)
@@ -1212,6 +1302,29 @@ export class KBEngineApp
         }
     }
 
+    GetViewEntityIDFromStream(stream: MemoryStream)
+	{
+		let id = 0;
+		if(this.entityIDAliasIDList.length > 255)
+		{
+			id = stream.ReadInt32();
+		}
+		else
+		{
+			var aliasID = stream.ReadUint8();
+
+			// 如果为0且客户端上一步是重登陆或者重连操作并且服务端entity在断线期间一直处于在线状态
+			// 则可以忽略这个错误, 因为cellapp可能一直在向baseapp发送同步消息， 当客户端重连上时未等
+			// 服务端初始化步骤开始则收到同步信息, 此时这里就会出错。
+			if(this.entityIDAliasIDList.length <= aliasID)
+				return 0;
+		
+			id = this.entityIDAliasIDList[aliasID];
+		}
+		
+		return id;
+    }
+    
     // 当前space添加了关于几何等信息的映射资源
 	// 客户端可以通过这个资源信息来加载对应的场景
     AddSpaceGeometryMapping(spaceID: number, resPath: string)
@@ -1245,6 +1358,114 @@ export class KBEngineApp
 		}
 
 		KBEDebug.INFO_MSG("KBEngineApp::Client_onCreateAccountResult: " + this.userName + " create is successfully!");
+    }
+
+    Client_onReqAccountResetPasswordCB(failcode: number)
+    {
+        if(failcode != 0)
+        {
+            KBEDebug.ERROR_MSG("KBEngine::Client_onReqAccountResetPasswordCB: " + this.userName + " is failed! code=" + failcode + "!");
+            return;
+        }
+
+        KBEDebug.DEBUG_MSG("KBEngine::Client_onReqAccountResetPasswordCB: " + this.userName + " is successfully!");
+    }
+
+    Client_onReqAccountBindEmailCB(failcode: number)
+    {
+        if(failcode != 0)
+        {
+            KBEDebug.ERROR_MSG("KBEngine::Client_onReqAccountBindEmailCB: " + this.userName + " is failed! code=" + failcode + "!");
+            return;
+        }
+
+        KBEDebug.DEBUG_MSG("KBEngine::Client_onReqAccountBindEmailCB: " + this.userName + " is successfully!");
+    }
+
+    Client_onReqAccountNewPasswordCB(failcode: number)
+    {
+        if(failcode != 0)
+        {
+            KBEDebug.ERROR_MSG("KBEngine::Client_onReqAccountNewPasswordCB: " + this.userName + " is failed! code=" + failcode + "!");
+            return;
+        }
+
+        KBEDebug.DEBUG_MSG("KBEngine::Client_onReqAccountNewPasswordCB: " + this.userName + " is successfully!");
+    }
+
+    Client_onEntityDestroyed(eid: number)
+    {
+        KBEDebug.DEBUG_MSG("KBEngine::Client_onEntityDestroyed: entity(" + eid + ")");
+        
+        let entity = this.entities[eid];
+        
+        if(entity === undefined)
+        {
+            KBEDebug.ERROR_MSG("KBEngine::Client_onEntityDestroyed: entity(" + eid + ") not found!");
+            return;
+        }
+        
+        if(entity.inWorld)
+        {
+            if(this.entity_id == eid)
+                this.ClearSpace(false);
+            
+            entity.LeaveWorld();
+        }
+
+        let index = this.controlledEntities.indexOf(entity);
+        if(index != -1)
+        {
+            this.controlledEntities.splice(index, 1);
+            KBEEvent.Fire("onLoseControlledEntity", entity);
+        }
+            
+        delete this.entities[eid];
+        entity.Destroy();
+    }
+
+    /// <summary>
+    /// 服务器通知客户端：某个entity的parent改变了
+    /// </summary>
+    Client_onParentChanged(eid: number, parentID: number)
+    {
+        let ent = this.entities[eid];
+        if (ent == undefined)
+        {
+            KBEDebug.ERROR_MSG("Client_onParentChanged: invalid entity id " + eid + ", parent " + parentID);
+            return;
+        }
+
+        if (parentID <= 0)
+        {
+            ent.SetParent(undefined);
+            return;
+        }
+        
+        let parentEnt = this.entities[parentID];
+        if (parentEnt == undefined)
+            ent.parentID = parentID;
+        else
+            ent.SetParent(parentEnt);
+    }
+
+    // 服务端通知流数据下载开始
+    // 请参考API手册关于onStreamDataStarted
+    Client_onStreamDataStarted(id: number, datasize: number, descr: string)
+    {
+        KBEEvent.Fire("onStreamDataStarted", id, datasize, descr);
+    }
+        
+    Client_onStreamDataRecv(stream: MemoryStream)
+    {
+        let resID = stream.ReadInt16();
+        let datas = stream.ReadBlob();
+        KBEEvent.Fire("onStreamDataRecv", resID, datas);
+    }
+
+    Client_onStreamDataCompleted(id: number)
+    {
+        KBEEvent.Fire("onStreamDataCompleted", id);
     }
     
     Client_onControlEntity(eid: number, isControlled: boolean)
