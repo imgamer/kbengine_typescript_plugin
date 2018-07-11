@@ -18,16 +18,14 @@ export default class Account extends Entity
     set_wxnickname(oldval: any)
     {
         KBEDebug.DEBUG_MSG("Entity::set_wxnickname------------------->>>id:%d value:%s.", this.id, this["wxnickname"].toString());
-        let val = 50;
-        let low = 0x00001111 & val;
-        let high = 0x11110000 & val;
-        let u64data = new Datatypes.UINT64(low, high);
-        this.BaseCall("pingBase", u64data);
+
+        let data = Datatypes.BuildUINT64(15);
+        this.BaseCall("pingBase", data);
     }
 
-    pingBack(time: Datatypes.UINT64)
+    pingBack(data: Datatypes.UINT64)
     {
-        KBEDebug.DEBUG_MSG("Entity::pingBack------------------->>>id:%d value:%s.", this.id, time.toString());
+        KBEDebug.DEBUG_MSG("Entity::pingBack------------------->>>id:%d value:%s.", this.id, data.toString());
     }
 }
 

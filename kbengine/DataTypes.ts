@@ -69,14 +69,14 @@ export class UINT64
 
     toString()
     {
-		var low = this.low.toString(16);
-		var high = this.high.toString(16);
+		let low = this.low.toString(16);
+		let high = this.high.toString(16);
 		
-		var result = "";
+		let result = "";
 		if(this.high > 0)
 		{
 			result += high;
-			for(var i = 8 - low.length; i > 0; --i)
+			for(let i = 8 - low.length; i > 0; --i)
 			{
 				result += "0";
 			}
@@ -86,6 +86,27 @@ export class UINT64
     }
 }
 
+export function BuildINT64(data: number): INT64
+{
+    let low = data & 0xffff;
+
+    // js不支持32位移位操作，分2次右移
+    let high = data >> 16;
+    high = (high >> 16) & 0xffff;
+
+    return new INT64(low, high);
+}
+
+export function BuildUINT64(data: number): UINT64
+{
+    let low = data & 0xffff;
+
+    // js不支持32位移位操作，分2次右移
+    let high = data >> 16;
+    high = (high >> 16) & 0xffff;
+
+    return new UINT64(low, high);
+}
 
 function IsNumber(anyObject: any): boolean
 {
