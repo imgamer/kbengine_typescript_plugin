@@ -12,6 +12,7 @@ import * as EntityDef from "./EntityDef";
 import Entity from "./Entity";
 import { UINT64 } from "../../../code/DataTypes";
 import { BaseEntityCall, CellEntityCall } from "./EntityCall";
+import * as KBEMath from "./KBEMath";
 
 export class KBEngineArgs
 {
@@ -74,11 +75,24 @@ export class KBEngineApp
     private lastTickCBTime: number = 0;
 
     entities: {[id:number]: Entity} = {};
-    bufferedCreateEntityMessage: {[id:number]: MemoryStream} = {};
+    private bufferedCreateEntityMessage: {[id:number]: MemoryStream} = {};
     entity_id: number = 0;
-    entity_uuid: UINT64;
+    private entity_uuid: UINT64;
+    private controlledEntities: Array<Entity> = new Array<Entity>();
+    private entityIDAliasIDList: Array<number> = new Array<number>();
 
+	// 这个参数的选择必须与kbengine_defs.xml::cellapp/aliasEntityID的参数保持一致
+    useAliasEntityID = true;
+    
     isOnInitCallPropertysSetMethods = true;
+
+	// 当前玩家最后一次同步到服务端的位置与朝向与服务端最后一次同步过来的位置
+	entityServerPos = new KBEMath.Vector3(0.0, 0.0, 0.0);
+
+    spacedata: {[key:string]: string} = {};
+    spaceID = 0;
+    spaceResPath = "";
+    isLoadedGeometry = false;
 
     private static _app: KBEngineApp = undefined;
     static get app()
@@ -403,6 +417,13 @@ export class KBEngineApp
 		KBEDebug.ERROR_MSG("Client_onVersionNotMatch: verInfo=" + this.clientVersion + " not match(server: " + this.serverVersion + ")");
 		KBEEvent.Fire("onVersionNotMatch", this.clientVersion, this.serverVersion);
     }
+
+    Client_onScriptVersionNotMatch(stream: MemoryStream)
+    {
+        this.serverScriptVersion = stream.ReadString();
+		KBEDebug.ERROR_MSG("Client_onScriptVersionNotMatch: verInfo=" + this.clientScriptVersion + " not match(server: " + this.serverScriptVersion + ")");
+		KBEEvent.Fire("onScriptVersionNotMatch", this.clientScriptVersion, this.serverScriptVersion);
+    }
     
 	Client_onAppActiveTickCB()
 	{
@@ -505,6 +526,26 @@ export class KBEngineApp
             this.onImportClientMessagesCompleted();
         }
     }
+
+
+	Client_onLoginBaseappFailed(failedcode)
+	{
+		KBEDebug.ERROR_MSG("KBEngineApp::Client_onLoginBaseappFailed: failedcode(" + this.serverErrors[failedcode].name + ")!");
+		KBEEvent.Fire("onLoginBaseappFailed", failedcode);
+	}
+
+	Client_onReloginBaseappFailed(failedcode)
+	{
+		KBEDebug.ERROR_MSG("KBEngineApp::Client_onReloginBaseappFailed: failedcode(" + this.serverErrors[failedcode].name + ")!");
+		KBEEvent.Fire("onReloginBaseappFailed", failedcode);
+	}
+
+	Client_onReloginBaseappSuccessfully(stream: MemoryStream)
+	{
+		this.entity_uuid = stream.ReadUint64();
+		KBEDebug.DEBUG_MSG("KBEngineApp::Client_onReloginBaseappSuccessfully: " + this.userName);
+		KBEEvent.Fire("onReloginBaseappSuccessfully");
+	}
 
     Client_onImportClientEntityDef(stream: MemoryStream)
     {
@@ -814,7 +855,7 @@ export class KBEngineApp
                 }
                 else
                 {
-                    if(entity.inWord)
+                    if(entity.inWorld)
                         propertyData.setHandler.call(entity, oldval);
                 }
             }
@@ -830,7 +871,6 @@ export class KBEngineApp
         let entity = this.entities[eid];
         if(entity === undefined)
         {
-            KBEDebug.DEBUG_MSG("Client_onCreatedProxies------------------->>>1111eid:%s.", eid);
             let scriptModule: EntityDef.ScriptModule = EntityDef.MODULE_DEFS[entityType];
             if(scriptModule === undefined)
             {
@@ -860,7 +900,6 @@ export class KBEngineApp
         }
         else
         {
-            KBEDebug.DEBUG_MSG("Client_onCreatedProxies------------------->>>2222eid:%s.", eid);
             let entityStream = this.bufferedCreateEntityMessage[eid];
             if(entityStream !== undefined)
             {
@@ -888,7 +927,7 @@ export class KBEngineApp
 
         KBEDebug.DEBUG_MSG("KBEngineApp::OnRemoteMethodCall: methodUtype(%d), use alias(%s).", 
                             methodUtype, scriptModule.useMethodDescrAlias);
-                            
+
         let defMethod: EntityDef.Method = scriptModule.methods[methodUtype];
 
         let args = [];
@@ -915,6 +954,336 @@ export class KBEngineApp
 
     Client_onRemoteMethodCallOptimized(stream: MemoryStream)
     {
+        KBEDebug.DEBUG_MSG("Client_onRemoteMethodCallOptimized------------------->>>.");
+        // TODO:
+    }
 
+    Client_onEntityEnterWorld(stream: MemoryStream)
+    {
+        KBEDebug.DEBUG_MSG("Client_onEntityEnterWorld------------------->>>.");
+
+        let eid = stream.ReadInt32();
+        if(this.entity_id > 0 && this.entity_id !== eid)
+            this.entityIDAliasIDList.push(eid);
+
+        let entityType = 0;
+        let useScriptModuleAlias: boolean = Object.keys(EntityDef.MODULE_DEFS).length > 255;
+        if(useScriptModuleAlias)
+            entityType = stream.ReadUint16();
+        else
+            entityType = stream.ReadUint8();
+        
+        let isOnGround: number = 1;
+        if(stream.Length() > 0)
+            isOnGround = stream.ReadInt8();
+
+        let parentID: number = 0;
+        if(stream.Length() > 0)
+            parentID = stream.ReadInt32();
+        
+        KBEDebug.DEBUG_MSG("KBEngineApp::Client_onEntityEnterWorld:entityType(%d) enter, isOnGround(%d), parentID(%d).", eid, isOnGround, parentID);
+
+        let entity: Entity = this.entities[eid];
+        if(entity === undefined)
+        {
+            let entityStream = this.bufferedCreateEntityMessage[eid];
+            if(entityStream === undefined)
+            {
+                KBEDebug.ERROR_MSG("KBEngine::Client_onEntityEnterWorld: entity(%d) not found!", eid);
+                return;
+            }
+
+            let module: EntityDef.ScriptModule = EntityDef.MODULE_DEFS[entityType]
+            if(module === undefined)
+            {
+                KBEDebug.ERROR_MSG("KBEngine::Client_onEntityEnterWorld: not found module(" + entityType + ")!");
+                return;
+            }
+
+            if(module.script === undefined)
+                return;
+
+            entity = new module.script();
+            entity.id = eid;
+            entity.className = module.name;
+
+            entity.cell = new CellEntityCall(this.networkInterface);
+            entity.cell.id = eid;
+
+            this.Client_onUpdatePropertys(entityStream);
+            delete this.bufferedCreateEntityMessage[eid];
+
+            entity.isOnGround = isOnGround > 0;
+
+            if(parentID > 0)
+            {
+                entity.parentID = parentID;
+                // TODO: 父子关系功能有待实现
+            }
+
+            entity.__init__();
+            entity.inWorld = true;
+            entity.EnterWorld();
+
+            if(this.args.isOnInitCallPropertysSetMethods)
+                entity.CallPropertysSetMethods();
+        }
+        else
+        {
+            if(entity.inWorld)
+            {
+                // 安全起见， 这里清空一下
+                // 如果服务端上使用giveClientTo切换控制权
+                // 之前的实体已经进入世界，切换后的实体也进入世界，这里可能会残留之前那个实体进入世界的信息
+                this.entityIDAliasIDList = [];
+				this.entities = {}
+                this.entities[entity.id] = entity
+                
+                entity.cell = new CellEntityCall(this.networkInterface);
+                entity.cell.id = eid;
+
+                entity.set_direction(entity.direction);
+                entity.set_position(entity.position);
+                
+                this.entityServerPos.x = entity.position.x;
+                this.entityServerPos.y = entity.position.y;
+                this.entityServerPos.z = entity.position.z;
+
+                entity.isOnGround = isOnGround > 0;
+				entity.inWorld = true;
+                entity.EnterWorld();
+                
+                if(this.args.isOnInitCallPropertysSetMethods)
+                    entity.CallPropertysSetMethods();
+            }
+        }
+    }
+
+    Client_onEntityLeaveWorld(eid: number)
+    {
+        let entity = this.entities[eid];
+        if(entity === undefined)
+        {
+            KBEDebug.ERROR_MSG("KBEngineApp::Client_onEntityLeaveWorld: entity(" + eid + ") not found!");
+            return;
+        }
+
+        if(entity.inWorld)
+            entity.LeaveWorld();
+
+        if(this.entity_id === eid)
+        {
+            this.ClearSpace(false);
+            entity.cell = undefined;
+        }
+        else
+        {
+            let index = this.controlledEntities.indexOf(entity);
+            if(index !== -1)
+            {
+                this.controlledEntities.splice(index, 1);
+                KBEEvent.Fire("onLoseControlledEntity", entity);
+            }
+
+            index = this.entityIDAliasIDList.indexOf(eid);
+            if(index != -1)
+                this.entityIDAliasIDList.splice(index, 1);
+
+            delete this.entities[eid];
+            entity.Destroy();
+        }
+    }
+
+    Client_initSpaceData(stream: MemoryStream)
+    {
+        this.ClearSpace(false);
+
+        let spaceID = stream.ReadUint32();
+        while(stream.Length() > 0)
+        {
+            let key = stream.ReadString();
+            let value = stream .ReadString();
+            this.Client_setSpaceData(spaceID, key, value);
+        }
+
+        KBEDebug.DEBUG_MSG("KBEngine::Client_initSpaceData: spaceID(" + spaceID + "), size(" + Object.keys(this.spacedata).length + ")!");
+    }
+
+    Client_setSpaceData(spaceID: number, key: string, value: string)
+    {
+        KBEDebug.DEBUG_MSG("KBEngine::Client_setSpaceData: spaceID(" + spaceID + "), key(" + key + "), value(" + value + ")!");
+
+        this.spacedata[key] = value;
+
+        if(key.indexOf("_mapping") != -1)
+            this.AddSpaceGeometryMapping(spaceID, value);
+
+        KBEEvent.Fire("onSetSpaceData", spaceID, key, value);
+    }
+
+    Client_onEntityEnterSpace(stream: MemoryStream)
+    {
+        let eid = stream.ReadInt32();
+        this.spaceID = stream.ReadUint32();
+
+        let isOnGround = 1;
+        if(stream.Length() > 0)
+            isOnGround = stream.ReadInt8();
+
+        let entity = this.entities[eid];
+        if(entity === undefined)
+        {
+            KBEDebug.ERROR_MSG("KBEngine::Client_onEntityEnterSpace: entity(" + eid + ") not found!");
+            return;
+        }
+
+		this.entityServerPos.x = entity.position.x;
+		this.entityServerPos.y = entity.position.y;
+		this.entityServerPos.z = entity.position.z;
+        entity.isOnGround = isOnGround > 0;
+
+        entity.EnterSpace();
+    }
+
+    Client_onEntityLeaveSpace(eid: number)
+    {
+        let entity = this.entities[eid];
+        if(entity === undefined)
+        {
+            KBEDebug.ERROR_MSG("KBEngine::Client_onEntityLeaveSpace: entity(" + eid + ") not found!");
+            return;
+        }
+
+        entity.LeaveSpace();
+        this.ClearSpace(false);
+    }
+
+	Player(): Entity
+	{
+		return this.entities[this.entity_id];
+	}
+
+    ClearSpace(isAll: boolean)
+    {
+        this.entityIDAliasIDList = [];
+        this.spacedata = {};
+        this.clearEntities(isAll);
+        this.isLoadedGeometry = false;
+        this.spaceID = 0;
+    }
+
+    clearEntities(isAll: boolean)
+    {
+        this.controlledEntities = [];
+        if(!isAll)
+        {
+            let entity: Entity = this.Player();
+			
+			for (let eid in this.entities)  
+			{
+                let eid_number = Number(eid);
+				if(eid_number == entity.id)
+					continue;
+				
+				if(this.entities[eid].inWorld)
+				{
+			    	this.entities[eid].LeaveWorld();
+			    }
+			    
+			    this.entities[eid].Destroy();
+			}
+				
+			this.entities = {}
+			this.entities[entity.id] = entity;
+        }
+        else
+        {
+			for (let eid in this.entities)  
+			{				
+				if(this.entities[eid].inWorld)
+				{
+			    	this.entities[eid].LeaveWorld();
+			    }
+			    
+			    this.entities[eid].Destroy();
+			}
+			
+			this.entities = {}
+        }
+    }
+
+    // 当前space添加了关于几何等信息的映射资源
+	// 客户端可以通过这个资源信息来加载对应的场景
+    AddSpaceGeometryMapping(spaceID: number, resPath: string)
+    {
+        KBEDebug.DEBUG_MSG("KBEngine::addSpaceGeometryMapping: spaceID(" + spaceID + "), resPath(" + resPath + ")!");
+
+        this.isLoadedGeometry = true;
+        this.spaceID = spaceID;
+        this.spaceResPath = resPath;
+
+        KBEEvent.Fire("addSpaceGeometryMapping", resPath);
+    }
+
+	Client_onKicked(failedcode: number)
+	{
+		KBEDebug.ERROR_MSG("KBEngineApp::Client_onKicked: failedcode(" + this.serverErrors[failedcode].name + ")!");
+		KBEEvent.Fire("onKicked", failedcode);
+    }
+    
+	Client_onCreateAccountResult(stream: MemoryStream)
+	{
+		let retcode = stream.ReadUint16();
+		let datas = stream.ReadBlob();
+		
+		KBEEvent.Fire("onCreateAccountResult", retcode, datas);
+		
+		if(retcode != 0)
+		{
+			KBEDebug.ERROR_MSG("KBEngineApp::Client_onCreateAccountResult: " + this.userName + " create is failed! code=" + this.serverErrors[retcode].name + "!");
+			return;
+		}
+
+		KBEDebug.INFO_MSG("KBEngineApp::Client_onCreateAccountResult: " + this.userName + " create is successfully!");
+    }
+    
+    Client_onControlEntity(eid: number, isControlled: boolean)
+    {
+        let entity: Entity = this.entities[eid];
+
+        if (entity == undefined)
+        {
+            KBEDebug.ERROR_MSG("KBEngine::Client_onControlEntity: entity(%d) not found!", eid);
+            return;
+        }
+
+        var isCont = isControlled !== false;
+        if (isCont)
+        {
+            // 如果被控制者是玩家自己，那表示玩家自己被其它人控制了
+            // 所以玩家自己不应该进入这个被控制列表
+            if (this.Player().id != entity.id)
+            {
+                this.controlledEntities.push(entity);
+            }
+        }
+        else
+        {
+            let index = this.controlledEntities.indexOf(entity);
+            if(index != -1)
+                this.controlledEntities.splice(index, 1);
+        }
+        
+        entity.isControlled = isCont;
+        
+        try
+        {
+            entity.OnControlled(isCont);
+            KBEEvent.Fire("onControlled", entity, isCont);
+        }
+        catch (e)
+        {
+            KBEDebug.ERROR_MSG("KBEngine::Client_onControlEntity: entity id = %d, is controlled = %s, error = %s", eid, isCont, e.toString());
+        }
     }
 }

@@ -119,6 +119,11 @@ export function Clear()
     MODULE_DEFS = {};
 }
 
+export function UseScriptModuleAlias(): boolean
+{
+    return Object.keys(MODULE_DEFS).length > 255;
+}
+
 class EntityDef
 {
     static moduleDefs = {};

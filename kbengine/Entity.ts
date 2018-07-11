@@ -21,12 +21,14 @@ export default class Entity
     id: number;
     className: string;
 
+    parentID: number;
+
     position: KBEMath.Vector3 = new KBEMath.Vector3(0, 0, 0);
     direction: KBEMath.Vector3 = new KBEMath.Vector3(0, 0, 0);
     entityLastLocalPos = new KBEMath.Vector3(0.0, 0.0, 0.0);
     entityLastLocalDir = new KBEMath.Vector3(0.0, 0.0, 0.0);
 
-    inWord: boolean = false;
+    inWorld: boolean = false;
     inited: boolean = false;
     isControlled: boolean = false;
     isOnGround: boolean = false;
@@ -56,7 +58,7 @@ export default class Entity
             {
                 if(property.IsBase())
                 {
-                    if(this.inited && !this.inWord)
+                    if(this.inited && !this.inWorld)
                     {
                         let oldval = this[name];
                         setmethod.call(this, oldval)
@@ -64,7 +66,7 @@ export default class Entity
                 }
                 else
                 {
-                    if(this.inWord)
+                    if(this.inWorld)
                     {
                         if(property.IsOwnerOnly() || !this.IsPlayer())
                             continue;
@@ -82,8 +84,10 @@ export default class Entity
 
     }
 
-    OnControlled()
-    {}
+    OnControlled(isControlled: boolean)
+    {
+        KBEDebug.DEBUG_MSG("Entity::OnControlled:entity(%id) controlled state(%s) change.", this.id, isControlled);
+    }
 
     IsPlayer(): boolean
     {
@@ -227,10 +231,16 @@ export default class Entity
         KBEDebug.DEBUG_MSG("Entity::OnUpdateVolatileData------------------->>>id:%s.", this.id);
     }
 
-    Set_position(oldVal: KBEMath.Vector3)
+    set_position(oldVal: KBEMath.Vector3)
     {}
 
-    Set_direction(oldVal: KBEMath.Vector3)
+    set_direction(oldVal: KBEMath.Vector3)
     {}
+
+    Destroy()
+    {
+        // TODO:...
+        this.OnDestroy();
+    }
 }
 
