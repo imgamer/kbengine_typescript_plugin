@@ -79,6 +79,7 @@ export class KBEngineApp
     private bufferedCreateEntityMessage: {[id:number]: MemoryStream} = {};
     entity_id: number = 0;
     private entity_uuid: UINT64;
+    private entity_type: string = "";
     private controlledEntities: Array<Entity> = new Array<Entity>();
     private entityIDAliasIDList: Array<number> = new Array<number>();
 
@@ -94,6 +95,8 @@ export class KBEngineApp
     spaceID = 0;
     spaceResPath = "";
     isLoadedGeometry = false;
+
+    component: string = "";
 
     private static _app: KBEngineApp = undefined;
     static get app()
@@ -195,7 +198,49 @@ export class KBEngineApp
         KBEDebug.DEBUG_MSG("KBEngineApp::Reset");
         this.networkInterface.Disconnect();
 
+		this.currserver = "loginapp";
+        this.currstate = "create";
+
+        // 扩展数据
+        this.serverdatas = undefined;
+
+		// 版本信息
+		this.serverVersion = "";
+		this.serverScriptVersion = "";
+		this.serverProtocolMD5 = "";
+		this.serverEntityDefMD5 = "";
+		this.clientVersion = "0.9.12";
+        this.clientScriptVersion = "0.1.0";
+        
+		// player的相关信息
+		this.entity_uuid = undefined;
+		this.entity_id = 0;
+        this.entity_type = "";
+        
+		// 当前玩家最后一次同步到服务端的位置与朝向与服务端最后一次同步过来的位置
+        this.entityServerPos = new KBEMath.Vector3(0.0, 0.0, 0.0);
+        
+		// 客户端所有的实体
+		this.entities = {};
+		this.entityIDAliasIDList = [];
+		this.controlledEntities = [];
+
+		// 空间的信息
+		this.spacedata = {};
+		this.spaceID = 0;
+		this.spaceResPath = "";
+        this.isLoadedGeometry = false;
+        
+		// 对象实例化时用即时时间初始化，否则update会不断执行，然而此时可能刚连接上服务器，但还未登陆，没导入协议，有可能导致出错
+		// 如此初始化后会等待15s才会向服务器tick，时间已经足够服务器准备好
+		var dateObject = new Date();
+		this.lastTickTime = dateObject.getTime();
+        this.lastTickCBTime = dateObject.getTime();
+        
         DataTypes.Reset();
+
+		// 当前组件类别， 配套服务端体系
+		this.component = "client";
     }
 
     Login(userName: string, password: string, datas: string): void
@@ -916,11 +961,11 @@ export class KBEngineApp
 
             let propertyData: EntityDef.Property = module.propertys[utype];
             let val = propertyData.utype.CreateFromStream(stream);
-            let oldval = entity[propertyData.name];
+            let oldval = entity.GetPropertyValue(propertyData.name);
             KBEDebug.INFO_MSG("KBEngineApp::OnUpdatePropertys: entity %s(id:%d, name:%s change oldval(%s) to val(%s), IsBase(%s),inited(%s), handler(%s).", 
                                 entity.className, eid, propertyData.name, oldval, val, propertyData.IsBase(), entity.inited, propertyData.setHandler);
 
-            entity[propertyData.name] = val;
+            entity.SetPropertyValue(propertyData.name, val);
 
             // 触发set_*方法
             if(propertyData.setHandler !== undefined)
@@ -944,6 +989,7 @@ export class KBEngineApp
         KBEDebug.INFO_MSG("KBEngineApp::Client_onCreatedProxies: uuid:(%s) eid(%d), entityType(%s)!", rndUUID.toString(), eid, entityType);
         this.entity_uuid = rndUUID;
         this.entity_id = eid;
+        this.entity_type = entityType;
         
         let entity = this.entities[eid];
         if(entity === undefined)
@@ -1032,7 +1078,8 @@ export class KBEngineApp
     Client_onRemoteMethodCallOptimized(stream: MemoryStream)
     {
         KBEDebug.DEBUG_MSG("Client_onRemoteMethodCallOptimized------------------->>>.");
-        // TODO:
+        let eid = this.GetViewEntityIDFromStream(stream);
+        this.OnRemoteMethodCall(eid, stream);
     }
 
     Client_onEntityEnterWorld(stream: MemoryStream)
@@ -1095,7 +1142,7 @@ export class KBEngineApp
             if(parentID > 0)
             {
                 entity.parentID = parentID;
-                // TODO: 父子关系功能有待实现
+                // TODO: 父子关系功能支持有待实现
             }
 
             entity.__init__();

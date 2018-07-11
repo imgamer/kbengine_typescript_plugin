@@ -81,9 +81,24 @@ export default class Entity
         }
     }
 
+    GetPropertyValue(name: string)
+    {
+        let value = this[name];
+        if(value == undefined)
+        {
+            KBEDebug.WARNING_MSG("Entity::GetPropertyValue: property(%s) not found(undefined).", name);
+        }
+
+        return value;
+    }
+
+    SetPropertyValue(name: string, value: any)
+    {
+        this[name] = value;
+    }
+
     OnDestroy()
     {
-
     }
 
     OnControlled(isControlled: boolean)
@@ -257,7 +272,7 @@ export default class Entity
 
     Destroy()
     {
-        // TODO:...
+        // TODO:...父子关系处理
         this.OnDestroy();
     }
 
