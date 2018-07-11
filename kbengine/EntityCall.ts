@@ -18,15 +18,12 @@ export abstract class EntityCall
     {
         KBEDebug.ASSERT(this.bundle !== undefined);
 
-        if(bundle !== this.bundle)
-        {
-            bundle.Send(this.networkInterface);
-        }
-        else
-        {
-            this.bundle.Send(this.networkInterface);
+        if(bundle === undefined)
+            bundle = this.bundle;
+        bundle.Send(this.networkInterface);
+        
+        if(bundle === this.bundle)
             this.bundle = undefined;
-        }
     }
 
     protected abstract BuildBundle();
