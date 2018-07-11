@@ -123,6 +123,9 @@ export class KBEngineApp
         Message.BindFixedMessage();
         DataTypes.InitDatatypeMapping();
 
+        let now = new Date().getTime();
+        this.lastTickTime = now;
+        this.lastTickCBTime = now;
         this.idInterval = setInterval(this.Update.bind(this), this.args.updateHZ);
     }
 
