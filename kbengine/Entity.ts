@@ -13,6 +13,7 @@ import {KBEngineApp} from "./KBEngine";
 import KBEDebug from "./KBEDebug";
 import * as EntityDef from "./EntityDef";
 import { EntityCall } from "./EntityCall";
+import KBEEvent from "./Event";
 
 export default class Entity
 {
@@ -233,10 +234,26 @@ export default class Entity
     }
 
     set_position(oldVal: KBEMath.Vector3)
-    {}
+    {
+        if(this.inWorld)
+           KBEEvent.Fire("set_position", this);
+    }
 
     set_direction(oldVal: KBEMath.Vector3)
-    {}
+    {
+        if(this.inWorld)
+           KBEEvent.Fire("set_direction", this);
+    }
+
+    SetPositionFromServer(postion: KBEMath.Vector3)
+    {
+        // TODO:...
+    }
+
+    SetDirectionFromServer(direction: KBEMath.Vector3)
+    {
+        // TODO:...
+    }
 
     Destroy()
     {

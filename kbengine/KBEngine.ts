@@ -31,6 +31,7 @@ class ServerError
     description: string = "";
 }
 
+const KBE_FLT_MAX: number = 3.402823466e+38;
 
 export class KBEngineApp
 {
@@ -1506,5 +1507,387 @@ export class KBEngineApp
         {
             KBEDebug.ERROR_MSG("KBEngine::Client_onControlEntity: entity id = %d, is controlled = %s, error = %s", eid, isCont, e.toString());
         }
+    }
+
+    UpdateVolatileData(entityID: number, x: number, y: number, z: number, yaw: number, pitch: number, roll: number, isOnGround: number)
+	{
+		let entity = this.entities[entityID];
+		if(entity === undefined)
+		{
+			// 如果为0且客户端上一步是重登陆或者重连操作并且服务端entity在断线期间一直处于在线状态
+			// 则可以忽略这个错误, 因为cellapp可能一直在向baseapp发送同步消息， 当客户端重连上时未等
+			// 服务端初始化步骤开始则收到同步信息, 此时这里就会出错。			
+			KBEDebug.ERROR_MSG("KBEngineApp::_updateVolatileData: entity(" + entityID + ") not found!");
+			return;
+		}
+		
+		// 小于0不设置
+		if(isOnGround >= 0)
+		{
+			entity.isOnGround = (isOnGround > 0);
+		}
+		
+		let changeDirection = false;
+		
+		if(roll != KBE_FLT_MAX)
+		{
+			changeDirection = true;
+			entity.direction.x = KBEMath.Int8ToAngle(roll, false);
+		}
+
+		if(pitch != KBE_FLT_MAX)
+		{
+			changeDirection = true;
+			entity.direction.y = KBEMath.Int8ToAngle(pitch, false);
+		}
+		
+		if(yaw != KBE_FLT_MAX)
+		{
+			changeDirection = true;
+			entity.direction.z = KBEMath.Int8ToAngle(yaw, false);
+		}
+		
+		let done = false;
+		if(changeDirection == true)
+		{
+			KBEEvent.Fire("set_direction", entity);		
+			done = true;
+		}
+		
+		let positionChanged = false;
+		if(x != KBE_FLT_MAX || y != KBE_FLT_MAX || z != KBE_FLT_MAX)
+			positionChanged = true;
+
+		if (x == KBE_FLT_MAX) x = 0.0;
+		if (y == KBE_FLT_MAX) y = 0.0;
+		if (z == KBE_FLT_MAX) z = 0.0;
+        
+		if(positionChanged)
+		{
+			entity.position.x = x + this.entityServerPos.x;
+			entity.position.y = y + this.entityServerPos.y;
+			entity.position.z = z + this.entityServerPos.z;
+			
+			done = true;
+			KBEEvent.Fire("updatePosition", entity);
+		}
+		
+		if(done)
+			entity.OnUpdateVolatileData();		
+    }
+    
+    Client_onUpdateBasePos(x, y, z)
+	{
+		this.entityServerPos.x = x;
+		this.entityServerPos.y = y;
+		this.entityServerPos.z = z;
+    }
+    
+    Client_onUpdateBaseDir(stream: MemoryStream)
+    {
+    }
+
+    Client_onUpdateBasePosXZ(x, z)
+	{
+		this.entityServerPos.x = x;
+		this.entityServerPos.z = z;
+    }
+    
+    Client_onUpdateData(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		let entity = this.entities[eid];
+		if(entity == undefined)
+		{
+			KBEDebug.ERROR_MSG("KBEngineApp::Client_onUpdateData: entity(" + eid + ") not found!");
+			return;
+		}
+	}
+
+    Client_onSetEntityPosAndDir(stream: MemoryStream)
+	{
+		let eid = stream.ReadInt32();
+		let entity = this.entities[eid];
+		if(entity == undefined)
+		{
+			KBEDebug.ERROR_MSG("KBEngineApp::Client_onSetEntityPosAndDir: entity(" + eid + ") not found!");
+			return;
+		}
+		
+		entity.position.x = stream.ReadFloat();
+		entity.position.y = stream.ReadFloat();
+		entity.position.z = stream.ReadFloat();
+		entity.direction.x = stream.ReadFloat();
+		entity.direction.y = stream.ReadFloat();
+		entity.direction.z = stream.ReadFloat();
+		
+		// 记录玩家最后一次上报位置时自身当前的位置
+		entity.entityLastLocalPos.x = entity.position.x;
+		entity.entityLastLocalPos.y = entity.position.y;
+		entity.entityLastLocalPos.z = entity.position.z;
+		entity.entityLastLocalDir.x = entity.direction.x;
+		entity.entityLastLocalDir.y = entity.direction.y;
+		entity.entityLastLocalDir.z = entity.direction.z;	
+		
+		entity.set_direction(entity.direction);
+		entity.set_position(entity.position);
+    }
+    
+    Client_onUpdateData_ypr(stream: MemoryStream)
+    {
+        let eid = this.GetViewEntityIDFromStream(stream);
+        
+        let y = stream.ReadInt8();
+        let p = stream.ReadInt8();
+        let r = stream.ReadInt8();
+        
+        this.UpdateVolatileData(eid, KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, y, p, r, -1);
+    }
+
+    Client_onUpdateData_yp(stream: MemoryStream)
+    {
+        let eid = this.GetViewEntityIDFromStream(stream);
+        
+        let y = stream.ReadInt8();
+        let p = stream.ReadInt8();
+        
+        this.UpdateVolatileData(eid, KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, y, p, KBE_FLT_MAX, -1);
+    }
+
+    Client_onUpdateData_yr(stream: MemoryStream)
+    {
+        let eid = this.GetViewEntityIDFromStream(stream);
+        
+        let y = stream.ReadInt8();
+        let r = stream.ReadInt8();
+        
+        this.UpdateVolatileData(eid, KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, y, KBE_FLT_MAX, r, -1);
+    }
+
+    Client_onUpdateData_pr(stream: MemoryStream)
+    {
+        let eid = this.GetViewEntityIDFromStream(stream);
+        
+        let p = stream.ReadInt8();
+        let r = stream.ReadInt8();
+        
+        this.UpdateVolatileData(eid, KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, p, r, -1);
+    }
+
+    Client_onUpdateData_y(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let y = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, y, KBE_FLT_MAX, KBE_FLT_MAX, -1);
+    }
+    
+    Client_onUpdateData_p(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let p = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, p, KBE_FLT_MAX, -1);
+    }
+    
+    Client_onUpdateData_r(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let r = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, r, -1);
+    }
+    
+    Client_onUpdateData_xz(stream: MemoryStream)
+    {
+        let eid = this.GetViewEntityIDFromStream(stream);
+        
+        let xz = stream.ReadPackXZ();
+        
+        this.UpdateVolatileData(eid, xz[0], KBE_FLT_MAX, xz[1], KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, 1);
+    }
+
+    Client_onUpdateData_xz_ypr(stream: MemoryStream)
+    {
+        let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let xz = stream.ReadPackXZ();
+
+		let y = stream.ReadInt8();
+		let p = stream.ReadInt8();
+		let r = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], KBE_FLT_MAX, xz[1], y, p, r, 1);
+    }
+
+    Client_onUpdateData_xz_yp(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let xz = stream.ReadPackXZ();
+
+		let y = stream.ReadInt8();
+		let p = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], KBE_FLT_MAX, xz[1], y, p, KBE_FLT_MAX, 1);
+    }
+    
+    Client_onUpdateData_xz_yr(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let xz = stream.ReadPackXZ();
+
+		let y = stream.ReadInt8();
+		let r = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], KBE_FLT_MAX, xz[1], y, KBE_FLT_MAX, r, 1);
+    }
+    
+    Client_onUpdateData_xz_pr(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let xz = stream.ReadPackXZ();
+
+		let p = stream.ReadInt8();
+		let r = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], KBE_FLT_MAX, xz[1], KBE_FLT_MAX, p, r, 1);
+    }
+    
+    Client_onUpdateData_xz_y(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let xz = stream.ReadPackXZ();
+
+		let y = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], KBE_FLT_MAX, xz[1], y, KBE_FLT_MAX, KBE_FLT_MAX, 1);
+    }
+    
+    Client_onUpdateData_xz_p(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		var xz = stream.ReadPackXZ();
+
+		var p = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], KBE_FLT_MAX, xz[1], KBE_FLT_MAX, p, KBE_FLT_MAX, 1);
+    }
+    
+    Client_onUpdateData_xz_r(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		var xz = stream.ReadPackXZ();
+
+		var r = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], KBE_FLT_MAX, xz[1], KBE_FLT_MAX, KBE_FLT_MAX, r, 1);
+    }
+    
+    Client_onUpdateData_xyz(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		var xz = stream.ReadPackXZ();
+		var y = stream.ReadPackY();
+		
+		this.UpdateVolatileData(eid, xz[0], y, xz[1], KBE_FLT_MAX, KBE_FLT_MAX, KBE_FLT_MAX, 0);
+    }
+    
+    Client_onUpdateData_xyz_ypr(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let xz = stream.ReadPackXZ();
+		let y = stream.ReadPackY();
+		
+		let yaw = stream.ReadInt8();
+		let p = stream.ReadInt8();
+		let r = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], y, xz[1], yaw, p, r, 0);
+    }
+    
+    Client_onUpdateData_xyz_yp(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let xz = stream.ReadPackXZ();
+		let y = stream.ReadPackY();
+		
+		let yaw = stream.ReadInt8();
+		let p = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], y, xz[1], yaw, p, KBE_FLT_MAX, 0);
+    }
+    
+    Client_onUpdateData_xyz_yr(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let xz = stream.ReadPackXZ();
+		let y = stream.ReadPackY();
+		
+		let yaw = stream.ReadInt8();
+		let r = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], y, xz[1], yaw, KBE_FLT_MAX, r, 0);
+    }
+    
+    Client_onUpdateData_xyz_pr(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let xz = stream.ReadPackXZ();
+		let y = stream.ReadPackY();
+		
+		let p = stream.ReadInt8();
+		let r = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], y, xz[1], KBE_FLT_MAX, p, r, 0);
+    }
+    
+    Client_onUpdateData_xyz_y(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let xz = stream.ReadPackXZ();
+		let y = stream.ReadPackY();
+		
+		let yaw = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], y, xz[1], yaw, KBE_FLT_MAX, KBE_FLT_MAX, 0);
+    }
+
+    Client_onUpdateData_xyz_p(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let xz = stream.ReadPackXZ();
+		let y = stream.ReadPackY();
+		
+		let p = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], y, xz[1], KBE_FLT_MAX, p, KBE_FLT_MAX, 0);
+    }
+
+    Client_onUpdateData_xyz_r(stream: MemoryStream)
+	{
+		let eid = this.GetViewEntityIDFromStream(stream);
+		
+		let xz = stream.ReadPackXZ();
+		let y = stream.ReadPackY();
+		
+		let r = stream.ReadInt8();
+		
+		this.UpdateVolatileData(eid, xz[0], y, xz[1], KBE_FLT_MAX, KBE_FLT_MAX, r, 0);
     }
 }
