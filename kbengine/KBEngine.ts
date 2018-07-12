@@ -189,17 +189,29 @@ export class KBEngineApp
         KBEngineApp.app.SendTick();
     }
 
-    private GetConnectAddr(isLoginApp: boolean): string
+    private GetLoginappAddr(): string
     {
         let url = "";
         if(this.useURL)
             url = this.serverURL;
         else
         {
-            if(isLoginApp)
-                url = this.ip + ":" + this.port;
-            else
-                url = this.baseappIP + ":" + this.baseappPort;
+           url = this.ip + ":" + this.port;
+        }
+            
+        let addr = this.protocol + url;
+
+        return addr;
+    }
+
+    private GetBaseappAddr(): string
+    {
+        let url = "";
+        if(this.useURL)
+            url = this.serverURL;
+        else
+        {
+            url = this.baseappIP + ":" + this.baseappPort;
         }
             
         let addr = this.protocol + url;
@@ -312,7 +324,7 @@ export class KBEngineApp
     {
         if(noconnect)
         {
-            let addr: string = this.GetConnectAddr(true);
+            let addr: string = this.GetLoginappAddr();
             KBEDebug.INFO_MSG("KBEngineApp::Login_loginapp: start connect to " + addr + "!");
             
             this.networkInterface.ConnectTo(addr, (event: MessageEvent) => this.OnOpenLoginapp_login(event));
@@ -348,6 +360,7 @@ export class KBEngineApp
             let bundle = new Bundle();
             bundle.NewMessage(Message.messages["Loginapp_importClientMessages"]);
             bundle.Send(this.networkInterface);
+            KBEDebug.INFO_MSG("KBEngineApp::OnOpenLoginapp_login: start importClientMessages ...");
         }
 
         this.lastTickCBTime = (new Date()).getTime();
@@ -363,6 +376,100 @@ export class KBEngineApp
         bundle.WriteString(old_password);
         bundle.WriteString(new_password);
         bundle.Send(this.networkInterface);
+    }
+
+    Reset_password(userName: string)
+    {
+        this.Reset();
+        this.userName = userName;
+        this.Resetpassword_loginapp(true);
+    }
+
+    Resetpassword_loginapp(noconnect: boolean)
+    {
+        if(noconnect)
+        {
+            let addr = this.GetLoginappAddr();
+            KBEDebug.INFO_MSG("KBEngineApp::Resetpassword_loginapp: start connect to %s!", addr);
+            this.networkInterface.ConnectTo(addr, (event: MessageEvent) => this.OnOpenLoginapp_resetpassword(event));
+        }
+        else
+        {
+            let bundle = new Bundle();
+            bundle.NewMessage(Message.messages["Loginapp_reqAccountResetPassword"]);
+            bundle.WriteString(this.userName);
+            bundle.Send(this.networkInterface);
+        }
+    }
+
+    private OnOpenLoginapp_resetpassword(event: MessageEvent)
+    {
+        KBEDebug.INFO_MSG("KBEngineApp::onOpenLoginapp_resetpassword: successfully!");
+        this.currserver = "loginapp";
+        this.currstate = "resetpassword";
+
+        if(!this.loginappMessageImported)
+        {
+            let bundle = new Bundle();
+            bundle.NewMessage(Message.messages["Loginapp_importClientMessages"]);
+            bundle.Send(this.networkInterface);
+            KBEDebug.INFO_MSG("KBEngineApp::OnOpenLoginapp_resetpassword: start importClientMessages ...");
+        }
+        else
+        {
+            this.OnImportClientMessagesCompleted();
+        }
+    }
+
+    CreateAccount(userName: string, password: string, datas: string)
+    {
+        this.Reset();
+        this.userName = userName;
+        this.password = password;
+        this.clientDatas = datas;
+
+        this.CreateAccount_loginapp(true);
+    }
+
+    OnOpenLoginapp_createAccount(event: MessageEvent)
+	{  
+		KBEEvent.Fire("onConnectionState", true);
+		KBEDebug.INFO_MSG("KBEngineApp::OnOpenLoginapp_createAccount: successfully!");
+		this.currserver = "loginapp";
+		this.currstate = "createAccount";
+		
+		if(!this.loginappMessageImported)
+		{
+			let bundle = new Bundle();
+			bundle.NewMessage(Message.messages["Loginapp_importClientMessages"]);
+			bundle.Send(this.networkInterface);
+			KBEDebug.INFO_MSG("KBEngineApp::OnOpenLoginapp_createAccount: start importClientMessages ...");
+			KBEEvent.Fire("Loginapp_importClientMessages");
+		}
+		else
+		{
+			this.OnImportClientMessagesCompleted();
+		}
+    }
+    
+    CreateAccount_loginapp(noconnect: boolean)
+    {
+        if(noconnect)
+        {
+            let addr = this.GetLoginappAddr();
+            KBEDebug.INFO_MSG("KBEngineApp::CreateAccount_loginapp: start connect to %s!", addr);
+            this.networkInterface.ConnectTo(addr, (event: MessageEvent) => this.OnOpenLoginapp_createAccount(event));
+        }
+        else
+        {
+            let bundle = new Bundle();
+            bundle.NewMessage(Message.messages["Loginapp_reqCreateAccount"]);
+            bundle.WriteString(this.userName);
+            bundle.WriteString(this.password);
+            bundle.WriteBlob(this.clientDatas);
+
+            bundle.Send(this.networkInterface);
+        }
     }
 
     Client_onImportClientMessages(stream: MemoryStream)
@@ -418,10 +525,10 @@ export class KBEngineApp
             KBEDebug.DEBUG_MSG("KBEngineApp::OnImportClientMessages:import............msgid(%d), msglen(%d), msgname(%s), argtype(%d), argsize(%d).", msgid, msglen, msgname, argtype, argsize);
         }
 
-        this.onImportClientMessagesCompleted();
+        this.OnImportClientMessagesCompleted();
     }
 
-    private onImportClientMessagesCompleted()
+    private OnImportClientMessagesCompleted()
     {
         KBEDebug.INFO_MSG("KBEngineApp::onImportClientMessagesCompleted:successfully......currserver(%s) currstate(%s).", this.currserver, this.currstate);
         this.Hello();
@@ -444,9 +551,11 @@ export class KBEngineApp
             }
             else if(this.currstate == "resetpassword")
             {
+                this.Resetpassword_loginapp(false);
             }
             else    // createAccount
             {
+                this.CreateAccount_loginapp(false);
             }
         }
         else
@@ -461,12 +570,12 @@ export class KBEngineApp
             }
             else
             {
-                this.onImportEntityDefCompleted();
+                this.OnImportEntityDefCompleted();
             }
         }
     }
 
-    private onImportEntityDefCompleted()
+    private OnImportEntityDefCompleted()
     {
         KBEDebug.INFO_MSG("KBEngineApp::onImportEntityDefCompleted: successfully!");
         this.entitydefImported = true;
@@ -665,7 +774,7 @@ export class KBEngineApp
     {
         if(noconnect)
         {
-            let addr: string = this.GetConnectAddr(false);
+            let addr: string = this.GetBaseappAddr();
             KBEDebug.INFO_MSG("KBEngineApp::Login_baseapp: start connect to " + addr + "!");
             
             this.networkInterface.ConnectTo(addr, (event: MessageEvent) => this.OnOpenBaseapp(event));
@@ -694,7 +803,7 @@ export class KBEngineApp
         }
         else
         {
-            this.onImportClientMessagesCompleted();
+            this.OnImportClientMessagesCompleted();
         }
     }
 
@@ -904,7 +1013,7 @@ export class KBEngineApp
             }
         }
 
-        this.onImportEntityDefCompleted();
+        this.OnImportEntityDefCompleted();
     }
 
     private CreateAllDataTypeFromStream(stream: MemoryStream)
