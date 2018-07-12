@@ -164,6 +164,12 @@ export class KBEngineApp
     InstallEvents(): void
     {
         KBEDebug.DEBUG_MSG("KBEngineApp::InstallEvents");
+		KBEEvent.Register("createAccount", this, this.CreateAccount);
+		KBEEvent.Register("login", this, this.Login);
+		KBEEvent.Register("reloginBaseapp", this, this.ReloginBaseapp);
+		KBEEvent.Register("bindAccountEmail", this, this.BindAccountEmail);
+		KBEEvent.Register("newPassword", this, this.NewPassword);
+
         KBEEvent.Register("onDisconnected", this, this.OnDisconnected);
         KBEEvent.Register("onNetworkError", this, this.OnNetworkError);
     }
@@ -366,6 +372,15 @@ export class KBEngineApp
         this.lastTickCBTime = (new Date()).getTime();
     }
 
+    BindAccountEmail(emailAddress: string)
+    {
+        let bundle = new Bundle();
+        bundle.NewMessage(Message.messages["Baseapp_reqAccountBindEmail"])
+        bundle.WriteInt32(this.entity_id);
+        bundle.WriteString(this.password);
+        bundle.WriteString(emailAddress);
+        bundle.Send(this.networkInterface);
+    }
 		
     // 设置新密码，通过baseapp， 必须玩家登录在线操作所以是baseapp。
     NewPassword(old_password: string, new_password: string)
@@ -470,6 +485,34 @@ export class KBEngineApp
 
             bundle.Send(this.networkInterface);
         }
+    }
+
+    ReloginBaseapp()
+    {
+        if(this.networkInterface.IsGood)
+            return;
+
+        this.networkInterface.Close();
+        KBEEvent.Fire("onReloginBaseapp");
+        let addr = this.GetBaseappAddr();
+        KBEDebug.INFO_MSG("KBEngineApp::reloginBaseapp: start connect to %s!", addr);
+        this.networkInterface.ConnectTo(addr, (event: MessageEvent) => this.OnReOpenBaseapp(event));
+    }
+
+    OnReOpenBaseapp(event: MessageEvent)
+    {
+        KBEDebug.INFO_MSG("KBEngineApp::onReOpenBaseapp: successfully!");
+        this.currserver = "baseapp";
+
+        let bundle = new Bundle();
+        bundle.NewMessage(Message.messages["Baseapp_reloginBaseapp"]);
+        bundle.WriteString(this.userName);
+        bundle.WriteString(this.password);
+        bundle.WriteUint64(this.entity_uuid);
+        bundle.WriteUint32(this.entity_id);
+        bundle.Send(this.networkInterface);
+
+        this.lastTickCBTime = (new Date()).getTime();
     }
 
     Client_onImportClientMessages(stream: MemoryStream)
