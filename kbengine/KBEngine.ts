@@ -18,9 +18,11 @@ export class KBEngineArgs
 {
     ip: string = "127.0.0.1";
     port: number = 20013;
+    serverURL: string = "";
     updateHZ: number = 100;
     clientType: number = 5;
     isOnInitCallPropertysSetMethods: boolean = true;
+    useWss = false;
 }
 
 
@@ -286,7 +288,7 @@ export class KBEngineApp
         this.currserver = "loginapp";
         this.currstate = "login";
 
-        KBEEvent.Fire("Event_onConnectionState", true);
+        KBEEvent.Fire("onConnectionState", true);
 
         if(!this.loginappMessageImported)
         {
