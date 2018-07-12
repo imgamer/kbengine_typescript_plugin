@@ -23,6 +23,7 @@ export class KBEngineArgs
     clientType: number = 5;
     isOnInitCallPropertysSetMethods: boolean = true;
     useWss = false;
+    useURL = false;
 }
 
 
@@ -61,6 +62,10 @@ export class KBEngineApp
 	// 服务端分配的baseapp地址
 	private baseappIP = "";
 	private baseappPort = 0;
+
+    private protocol: string = "";
+    private useURL: boolean = false;
+    private serverURL: string = "";
 
     private currserver = "loginapp";
     private currstate = "create";
@@ -126,7 +131,11 @@ export class KBEngineApp
         if(KBEngineApp.app === undefined)
         {
             return;
-        }       
+        }
+
+        this.UninstallEvents();
+        this.Reset();
+        KBEngineApp._app = undefined;
     }
 
     private constructor(args: KBEngineArgs)
@@ -137,6 +146,9 @@ export class KBEngineApp
         this.args = args;
         this.ip = args.ip;
         this.port = args.port;
+        this.useURL = args.useURL;
+        this.serverURL = args.serverURL;
+        this.protocol = args.useWss? "wss://" : "ws://";
 
         this.InstallEvents();
 
@@ -152,11 +164,47 @@ export class KBEngineApp
     InstallEvents(): void
     {
         KBEDebug.DEBUG_MSG("KBEngineApp::InstallEvents");
+        KBEEvent.Register("onDisconnected", this, this.OnDisconnected);
+        KBEEvent.Register("onNetworkError", this, this.OnNetworkError);
     }
+
+    OnDisconnected()
+    {
+        this.networkInterface.Close();
+    }
+
+    OnNetworkError(event: MessageEvent)
+    {
+        KBEDebug.ERROR_MSG("KBEngineApp::OnNetworkError:%s.", event.toString())
+        this.networkInterface.Close();
+    }
+
+    UninstallEvents()
+	{
+		KBEEvent.DeregisterObject(this);
+	}
 
     Update(): void
     {
         KBEngineApp.app.SendTick();
+    }
+
+    private GetConnectAddr(isLoginApp: boolean): string
+    {
+        let url = "";
+        if(this.useURL)
+            url = this.serverURL;
+        else
+        {
+            if(isLoginApp)
+                url = this.ip + ":" + this.port;
+            else
+                url = this.baseappIP + ":" + this.baseappPort;
+        }
+            
+        let addr = this.protocol + url;
+
+        return addr;
     }
 
     private SendTick()
@@ -174,7 +222,7 @@ export class KBEngineApp
             if(this.lastTickCBTime < this.lastTickTime)
             {
                 KBEDebug.ERROR_MSG("KBEngineApp::Update: Receive appTick timeout!");
-                this.networkInterface.Disconnect();
+                this.networkInterface.Close();
                 return;
             }
 
@@ -198,7 +246,7 @@ export class KBEngineApp
     Reset(): void
     {
         KBEDebug.DEBUG_MSG("KBEngineApp::Reset");
-        this.networkInterface.Disconnect();
+        this.networkInterface.Close();
 
 		this.currserver = "loginapp";
         this.currstate = "create";
@@ -245,6 +293,11 @@ export class KBEngineApp
 		this.component = "client";
     }
 
+    FindEntity(entityID: number)
+	{
+		return this.entities[entityID];
+	}
+
     Login(userName: string, password: string, datas: string): void
     {
         this.Reset();
@@ -259,7 +312,7 @@ export class KBEngineApp
     {
         if(noconnect)
         {
-            let addr: string = "ws://" + this.ip +":" + this.port;
+            let addr: string = this.GetConnectAddr(true);
             KBEDebug.INFO_MSG("KBEngineApp::Login_loginapp: start connect to " + addr + "!");
             
             this.networkInterface.ConnectTo(addr, (event: MessageEvent) => this.OnOpenLoginapp_login(event));
@@ -604,7 +657,7 @@ export class KBEngineApp
 		KBEDebug.INFO_MSG("KBEngineApp::Client_onLoginSuccessfully: accountName(" + accountName + "), addr(" + 
         this.baseappIP + ":" + this.baseappPort + "), datas(" + this.serverdatas.length + ")!");
 		
-		this.networkInterface.Disconnect();
+		this.networkInterface.Close();
 		this.Login_baseapp(true);
     }
     
@@ -612,7 +665,7 @@ export class KBEngineApp
     {
         if(noconnect)
         {
-            let addr: string = "ws://" + this.baseappIP + ":" + this.baseappPort;
+            let addr: string = this.GetConnectAddr(false);
             KBEDebug.INFO_MSG("KBEngineApp::Login_baseapp: start connect to " + addr + "!");
             
             this.networkInterface.ConnectTo(addr, (event: MessageEvent) => this.OnOpenBaseapp(event));

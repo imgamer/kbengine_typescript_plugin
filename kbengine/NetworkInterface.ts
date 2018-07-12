@@ -23,7 +23,7 @@ export default class NetworkInterface
         catch(e)
         {
             KBEDebug.ERROR_MSG("NetworkInterface::Connect:Init socket error:" + e);
-            KBEEvent.Fire("Event_onConnectionState", false);
+            KBEEvent.Fire("onConnectionState", false);
             return;
         }
 
@@ -39,20 +39,21 @@ export default class NetworkInterface
         }
     }
 
-    Disconnect()
+    Close()
     {
         try
         {
-            KBEDebug.INFO_MSG("NetworkInterface::Disconnect："+this.IsGood)
+            KBEDebug.INFO_MSG("NetworkInterface::Close"+this.IsGood)
             if(this.socket != null)
             {
                 this.socket.close();
+                this.socket.onclose = undefined;
                 this.socket = null;
             }
         }
         catch(e)
         {
-            KBEDebug.ERROR_MSG("NetworkInterface::Disconnect error:%s.", e);
+            KBEDebug.ERROR_MSG("NetworkInterface::Close error:%s.", e);
         }
     }
 
@@ -88,6 +89,7 @@ export default class NetworkInterface
     private onerror = (event: MessageEvent) =>
     {
         KBEDebug.DEBUG_MSG("NetworkInterface::onerror:...!");
+        KBEEvent.Fire("onNetworkError", event);
     }
 
     private onmessage = (event: MessageEvent) =>
@@ -132,5 +134,6 @@ export default class NetworkInterface
     private onclose = () =>
     {
         KBEDebug.DEBUG_MSG("NetworkInterface::onclose:...!");
+        KBEEvent.Fire("onDisconnected");
     }
 }
