@@ -6,12 +6,12 @@ import Message from "./Message";
 
 export default class NetworkInterface
 {
-    socket: WebSocket = null;
-    onOpenCB: Function = null;
+    private socket: WebSocket = undefined;
+    private onOpenCB: Function = undefined;
 
     get IsGood(): boolean
     {
-        return this.socket != null && this.socket.readyState === WebSocket.OPEN;
+        return this.socket != undefined && this.socket.readyState === WebSocket.OPEN;
     }
 
     ConnectTo(addr: string, callbackFunc?: (event:Event)=>any)
@@ -44,11 +44,11 @@ export default class NetworkInterface
         try
         {
             KBEDebug.INFO_MSG("NetworkInterface::Close"+this.IsGood)
-            if(this.socket != null)
+            if(this.socket != undefined)
             {
                 this.socket.close();
                 this.socket.onclose = undefined;
-                this.socket = null;
+                this.socket = undefined;
             }
         }
         catch(e)
@@ -82,7 +82,7 @@ export default class NetworkInterface
         if(this.onOpenCB)
         {
             this.onOpenCB(event);
-            this.onOpenCB = null;
+            this.onOpenCB = undefined;
         }
     }
     
