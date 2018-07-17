@@ -43,7 +43,7 @@ export default class ClientApp extends cc.Component
 
     start()
     {
-        this.Login();
+        //this.Login();
     }
 
     InitKBEngine()
@@ -62,7 +62,14 @@ export default class ClientApp extends cc.Component
 
     Login(userName?: string, password?: string, data?: string)
     {
-        KBEngineApp.app.Login(this.userName, this.password, "test");
+        if(userName && password && data)
+        {
+            KBEngineApp.app.Login(userName, password, data);
+        }
+        else
+        {
+            KBEngineApp.app.Login(this.userName, this.password, "test");
+        }
     }
 
     InstallEvents()
