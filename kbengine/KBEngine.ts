@@ -1071,6 +1071,7 @@ export class KBEngineApp
 
         for(let dataType in DataTypes.datatypes)
         {
+            //KBEDebug.DEBUG_MSG("CreateAllDataTypeFromStream------------------->>>(key:%s), value:%s.", dataType, DataTypes.datatypes[dataType]);
             if(DataTypes.datatypes[dataType] != undefined)
             {
                 DataTypes.datatypes[dataType].Bind();
@@ -1255,10 +1256,10 @@ export class KBEngineApp
         else
             methodUtype = stream.ReadUint16();
 
-        KBEDebug.DEBUG_MSG("KBEngineApp::OnRemoteMethodCall: methodUtype(%d), use alias(%s).", 
-                            methodUtype, scriptModule.useMethodDescrAlias);
-
         let defMethod: EntityDef.Method = scriptModule.methods[methodUtype];
+
+        KBEDebug.DEBUG_MSG("KBEngineApp::OnRemoteMethodCall: methodUtype(%d), methodName(%s), use alias(%s).", 
+                            methodUtype, defMethod.name, scriptModule.useMethodDescrAlias);
 
         let args = [];
         for(let i = 0; i< defMethod.args.length; i++)

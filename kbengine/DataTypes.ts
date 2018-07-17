@@ -3,6 +3,7 @@ import MemoryStream from "./MemoryStream";
 import Bundle from "./Bundle";
 import * as KBEMath from "./KBEMath";
 import * as KBEEncoding from "./KBEEncoding";
+import KBEDebug from "./KBEDebug";
 
 
 export class INT64
@@ -650,9 +651,11 @@ export class DATATYPE_FIXED_DICT extends DATATYPE_BASE
     {
         for(let key in this.dictType)
         {
+            //KBEDebug.DEBUG_MSG("DATATYPE_FIXED_DICT::Bind------------------->>>show (key:%s, value:%s).", key, this.dictType[key]);
             if(typeof(this.dictType[key]) == "number")
             {
-                this.dictType[key] = datatypes[key];
+                let utype = Number(this.dictType[key]);
+                this.dictType[key] = datatypes[utype];
             }
         }
     }
@@ -662,6 +665,7 @@ export class DATATYPE_FIXED_DICT extends DATATYPE_BASE
         let datas = {};
         for(let key in this.dictType)
         {
+            KBEDebug.DEBUG_MSG("DATATYPE_FIXED_DICT::CreateFromStream------------------->>>FIXED_DICT(key:%s).", key);
             datas[key] = this.dictType[key].CreateFromStream(stream);
         }
 

@@ -27,6 +27,13 @@ export default class Account extends Entity
     {
         KBEDebug.DEBUG_MSG("Entity::pingBack------------------->>>id:%d value:%s.", this.id, data.toString());
     }
+
+    receiveLoginAffiche(LOGIN_AFFICHE_DATA)
+    {
+        let title = LOGIN_AFFICHE_DATA["title"];
+        let msg = LOGIN_AFFICHE_DATA["msg"];
+        KBEDebug.DEBUG_MSG("Entity::receiveLoginAffiche------------------->>>title:%s.msg:%s.", title, msg);
+    }
 }
 
 RegisterScript(Account);
