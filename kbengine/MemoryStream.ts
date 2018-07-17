@@ -12,9 +12,9 @@ class PackFloatXType
     constructor()
     {
         this._unionData = new ArrayBuffer(4);
-        this.fv = new Float32Array(this._unionData);
-        this.uv = new Uint32Array(this._unionData);
-        this.iv = new Int32Array(this._unionData);
+        this.fv = new Float32Array(this._unionData, 0, 1);
+        this.uv = new Uint32Array(this._unionData, 0, 1);
+        this.iv = new Int32Array(this._unionData, 0, 1);
     }
 }
 
@@ -98,7 +98,16 @@ export default class MemoryStream
 
     ReadFloat(): number
     {
-        let buf = new Float32Array(this.buffer, this.rpos);
+        let buf: Float32Array = undefined;
+        try
+        {
+            buf = new Float32Array(this.buffer, this.rpos, 1);
+        }
+        catch(e)
+        {
+            buf = new Float32Array(this.buffer.slice(this.rpos, this.rpos + 4));
+        }
+        
         this.rpos += 4;
 
         return buf[0];
@@ -106,9 +115,17 @@ export default class MemoryStream
 
     ReadDouble(): number
     {
-        let buf = new Float64Array(this.buffer, this.rpos);
+        let buf: Float64Array = undefined;
+		try
+		{
+			buf = new Float64Array(this.buffer, this.rpos, 1);
+		}
+		catch(e)
+		{
+			buf = new Float64Array(this.buffer.slice(this.rpos, this.rpos + 8), 0, 1);
+        }
+        
         this.rpos += 8;
-
         return buf[0];
     }
 
@@ -246,15 +263,39 @@ export default class MemoryStream
 
     WriteFloat(value: number): void
     {
-        let buf = new Float32Array(this.buffer, this.wpos, 1);
-        buf[0] = value;
+        try
+        {
+            let buf = new Float32Array(this.buffer, this.wpos, 1);
+            buf[0] = value;
+        }
+        catch(e)
+        {
+            let buf = new Float32Array(1);
+            buf[0] = value;
+            let buf1 = new Uint8Array(this.buffer);
+            let buf2 = new Uint8Array(buf.buffer);
+            buf1.set(buf2, this.wpos);
+        }
+
         this.wpos += 4;
     }
 
     WriteDouble(value: number): void
     {
-        let buf = new Float64Array(this.buffer, this.wpos, 1);
-        buf[0] = value;
+		try
+		{
+			let buf = new Float64Array(this.buffer, this.wpos, 1);
+			buf[0] = value;
+		}
+		catch(e)
+		{
+			let buf = new Float64Array(1);
+			buf[0] = value;
+			let buf1 = new Uint8Array(this.buffer);
+			let buf2 = new Uint8Array(buf.buffer);
+			buf1.set(buf2, this.wpos);
+        }
+        
         this.wpos += 8;
     }
 
