@@ -229,7 +229,7 @@ export class KBEngineApp
     {
         if(!this.networkInterface.IsGood)
         {
-            KBEDebug.DEBUG_MSG("KBEngineApp::SendTick...this.networkInterface is not ready.");
+            //KBEDebug.DEBUG_MSG("KBEngineApp::SendTick...this.networkInterface is not ready.");
             return;
         }
         
@@ -367,6 +367,10 @@ export class KBEngineApp
             bundle.NewMessage(Message.messages["Loginapp_importClientMessages"]);
             bundle.Send(this.networkInterface);
             KBEDebug.INFO_MSG("KBEngineApp::OnOpenLoginapp_login: start importClientMessages ...");
+        }
+        else
+        {
+            this.OnImportClientMessagesCompleted();
         }
 
         this.lastTickCBTime = (new Date()).getTime();
