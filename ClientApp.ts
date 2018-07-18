@@ -1,6 +1,7 @@
 
 import KBEDebug from "./kbengine/KBEDebug";
 import KBEEvent from "./kbengine/Event";
+import * as KBEEncoding from "./kbengine/KBEEncoding";
 import {KBEngineArgs, KBEngineApp} from "./kbengine/KBEngine";
 
 const {ccclass, property} = cc._decorator;
@@ -60,7 +61,7 @@ export default class ClientApp extends cc.Component
         KBEngineApp.Create(args);
     }
 
-    Login(userName?: string, password?: string, data?: string)
+    Login(userName?: string, password?: string, data?: Uint8Array)
     {
         if(userName && password && data)
         {
@@ -68,7 +69,8 @@ export default class ClientApp extends cc.Component
         }
         else
         {
-            KBEngineApp.app.Login(this.userName, this.password, "test");
+            let data = KBEEncoding.StringToUTF8Array("test");
+            KBEngineApp.app.Login(this.userName, this.password, data);
         }
     }
 

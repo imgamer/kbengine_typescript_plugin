@@ -43,7 +43,7 @@ export class KBEngineApp
 
     private userName: string = "test";
     private password: string = "123456";
-    private clientDatas: string = "";
+    private clientDatas: Uint8Array = new Uint8Array(0);
     private encryptedKey: string = "";
 
     private serverdatas: Uint8Array;
@@ -316,7 +316,7 @@ export class KBEngineApp
 		return this.entities[entityID];
 	}
 
-    Login(userName: string, password: string, datas: string): void
+    Login(userName: string, password: string, datas: Uint8Array): void
     {
         this.Reset();
         this.userName = userName;
@@ -440,7 +440,7 @@ export class KBEngineApp
         }
     }
 
-    CreateAccount(userName: string, password: string, datas: string)
+    CreateAccount(userName: string, password: string, datas: Uint8Array)
     {
         this.Reset();
         this.userName = userName;
