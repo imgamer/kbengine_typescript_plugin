@@ -182,9 +182,9 @@ export default class MemoryStream
 
         xPackData.uv[0] = 0x40000000;
         zPackData.uv[0] = 0x40000000;
-		var v1 = this.ReadUint8();
-		var v2 = this.ReadUint8();
-		var v3 = this.ReadUint8();
+		let v1 = this.ReadUint8();
+		let v2 = this.ReadUint8();
+		let v3 = this.ReadUint8();
 
 		let data = 0;
 		data |= (v1 << 16);
@@ -200,7 +200,7 @@ export default class MemoryStream
 		xPackData.uv[0] |= (data & 0x800000) << 8;
 		zPackData.uv[0] |= (data & 0x000800) << 20;
 		
-		var xzData = new Array(2);
+		let xzData = new Array(2);
 		xzData[0] = xPackData.fv[0];
 		xzData[1] = zPackData.fv[0];
 		return xzData;
