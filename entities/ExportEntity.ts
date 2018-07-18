@@ -6,9 +6,9 @@ import KBEDebug from "../kbengine/KBEDebug";
 var EntityScripts = {};
 //EntityScripts[Account.className] = Account;
 
-export function RegisterScript(script: any)
+export function RegisterScript(scriptName: string, script: any)
 {
-    EntityScripts[script.SCRIPT_NAME] = script;
+    EntityScripts[scriptName] = script;
 }
 
 export function GetEntityScript(name: string)

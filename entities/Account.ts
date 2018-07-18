@@ -36,4 +36,4 @@ export default class Account extends Entity
     }
 }
 
-RegisterScript(Account);
+RegisterScript(Account.SCRIPT_NAME, Account);
