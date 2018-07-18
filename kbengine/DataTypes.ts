@@ -141,7 +141,7 @@ export class DATATYPE_UINT8 extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return parseInt(value);
     }
 
     IsSameType(value: any): boolean
@@ -172,7 +172,7 @@ export class DATATYPE_UINT16 extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return parseInt(value);
     }
 
     IsSameType(value: any): boolean
@@ -203,7 +203,7 @@ export class DATATYPE_UINT32 extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return parseInt(value);
     }
 
     IsSameType(value: any): boolean
@@ -234,7 +234,7 @@ export class DATATYPE_UINT64 extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return parseInt(value);
     }
 
     IsSameType(value: any): boolean
@@ -257,7 +257,7 @@ export class DATATYPE_INT8 extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return parseInt(value);
     }
 
     IsSameType(value: any): boolean
@@ -288,7 +288,7 @@ export class DATATYPE_INT16 extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return parseInt(value);
     }
 
     IsSameType(value: any): boolean
@@ -319,7 +319,7 @@ export class DATATYPE_INT32 extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return parseInt(value);
     }
 
     IsSameType(value: any): boolean
@@ -350,7 +350,7 @@ export class DATATYPE_INT64 extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return parseInt(value);
     }
 
     IsSameType(value: any): boolean
@@ -373,7 +373,7 @@ export class DATATYPE_FLOAT extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return parseFloat(value);
     }
 
     IsSameType(value: any): boolean
@@ -396,7 +396,7 @@ export class DATATYPE_DOUBLE extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return parseFloat(value);
     }
 
     IsSameType(value: any): boolean
@@ -443,7 +443,7 @@ export class DATATYPE_VECTOR2 extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return new KBEMath.Vector2(0.0, 0.0);
     }
 
     IsSameType(value: any): boolean
@@ -468,7 +468,7 @@ export class DATATYPE_VECTOR3 extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return new KBEMath.Vector3(0.0, 0.0, 0.0);
     }
 
     IsSameType(value: any): boolean
@@ -494,7 +494,7 @@ export class DATATYPE_VECTOR4 extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return new KBEMath.Vector4(0.0, 0.0, 0.0, 0.0);
     }
 
     IsSameType(value: any): boolean
@@ -518,7 +518,7 @@ export class DATATYPE_PYTHON extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return new Uint8Array(0);
     }
 
     IsSameType(value: any): boolean
@@ -585,7 +585,7 @@ export class DATATYPE_BLOB extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return new Uint8Array(0);
     }
 
     IsSameType(value: any): boolean
@@ -627,7 +627,7 @@ export class DATATYPE_ARRAY extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return [];
     }
 
     IsSameType(value: any): boolean
@@ -682,7 +682,7 @@ export class DATATYPE_FIXED_DICT extends DATATYPE_BASE
 
     ParseDefaultValueString(value: string): any
     {
-        return eval(value);
+        return {};
     }
 
     IsSameType(value: any): boolean
