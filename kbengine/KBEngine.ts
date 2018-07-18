@@ -10,7 +10,6 @@ import * as DataTypes from "./DataTypes";
 import * as EntityDef from "./EntityDef";
 
 import Entity from "./Entity";
-import { UINT64 } from "../../../code/DataTypes";
 import { BaseEntityCall, CellEntityCall } from "./EntityCall";
 import * as KBEMath from "./KBEMath";
 
@@ -85,7 +84,7 @@ export class KBEngineApp
     entities: {[id:number]: Entity} = {};
     private bufferedCreateEntityMessage: {[id:number]: MemoryStream} = {};
     entity_id: number = 0;
-    private entity_uuid: UINT64;
+    private entity_uuid: DataTypes.UINT64;
     private entity_type: string = "";
     private controlledEntities: Array<Entity> = new Array<Entity>();
     private entityIDAliasIDList: Array<number> = new Array<number>();
