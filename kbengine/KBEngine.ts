@@ -1138,7 +1138,7 @@ export class KBEngineApp
     Client_onUpdatePropertys(stream: MemoryStream)
     {
         let eid = stream.ReadInt32();
-        KBEDebug.DEBUG_MSG("Client_onUpdatePropertys------------------->>>eid:%s.", eid);
+        //KBEDebug.DEBUG_MSG("Client_onUpdatePropertys------------------->>>eid:%s.", eid);
         this.OnUpdatePropertys(eid, stream);
     }
 
@@ -1173,8 +1173,8 @@ export class KBEngineApp
             let propertyData: EntityDef.Property = module.propertys[utype];
             let val = propertyData.utype.CreateFromStream(stream);
             let oldval = entity.GetPropertyValue(propertyData.name);
-            KBEDebug.INFO_MSG("KBEngineApp::OnUpdatePropertys: entity %s(id:%d, name:%s change oldval(%s) to val(%s), IsBase(%s),inited(%s), handler(%s).", 
-                                entity.className, eid, propertyData.name, oldval, val, propertyData.IsBase(), entity.inited, propertyData.setHandler);
+            //KBEDebug.DEBUG_MSG("KBEngineApp::OnUpdatePropertys: entity %s(id:%d, name:%s change oldval(%s) to val(%s), IsBase(%s),inited(%s).", 
+            //                    entity.className, eid, propertyData.name, oldval, val, propertyData.IsBase(), entity.inited);
 
             entity.SetPropertyValue(propertyData.name, val);
 
@@ -1261,8 +1261,8 @@ export class KBEngineApp
 
         let defMethod: EntityDef.Method = scriptModule.methods[methodUtype];
 
-        KBEDebug.DEBUG_MSG("KBEngineApp::OnRemoteMethodCall: methodUtype(%d), methodName(%s), use alias(%s).", 
-                            methodUtype, defMethod.name, scriptModule.useMethodDescrAlias);
+        //KBEDebug.DEBUG_MSG("KBEngineApp::OnRemoteMethodCall: methodUtype(%d), methodName(%s), use alias(%s).", 
+        //                    methodUtype, defMethod.name, scriptModule.useMethodDescrAlias);
 
         let args = [];
         for(let i = 0; i< defMethod.args.length; i++)
@@ -1288,14 +1288,14 @@ export class KBEngineApp
 
     Client_onRemoteMethodCallOptimized(stream: MemoryStream)
     {
-        KBEDebug.DEBUG_MSG("Client_onRemoteMethodCallOptimized------------------->>>.");
+        //KBEDebug.DEBUG_MSG("Client_onRemoteMethodCallOptimized------------------->>>.");
         let eid = this.GetViewEntityIDFromStream(stream);
         this.OnRemoteMethodCall(eid, stream);
     }
 
     Client_onEntityEnterWorld(stream: MemoryStream)
     {
-        KBEDebug.DEBUG_MSG("Client_onEntityEnterWorld------------------->>>.");
+        //KBEDebug.DEBUG_MSG("Client_onEntityEnterWorld------------------->>>.");
 
         let eid = stream.ReadInt32();
         if(this.entity_id > 0 && this.entity_id !== eid)

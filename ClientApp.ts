@@ -19,6 +19,9 @@ export default class ClientApp extends cc.Component
     useWss: boolean = false;
 
     @property
+    useURL: boolean = false;
+
+    @property
     serverURL: string = "";
 
     @property
@@ -57,6 +60,7 @@ export default class ClientApp extends cc.Component
         args.clientType = this.clientType;
         args.serverURL = this.serverURL;
         args.useWss = this.useWss;
+        args.useURL = this.useURL;
 
         KBEngineApp.Create(args);
     }
