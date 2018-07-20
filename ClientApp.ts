@@ -81,13 +81,17 @@ export default class ClientApp extends cc.Component
     InstallEvents()
     {
         KBEDebug.INFO_MSG("ClientApp::InstallEvents:start scene install event.");
-        // KBEEvent.Register("onConnectionState", this, undefined);
+        KBEEvent.Register("onConnectionState", this, this.OnConnectionState);
         // KBEEvent.Register("onLoginFailed", this, undefined);
         // KBEEvent.Register("onLoginBaseappFailed", this, undefined);
-        // KBEEvent.Register("enterScene", this, undefined);
         // KBEEvent.Register("onReloginBaseappFailed", this, undefined);
         // KBEEvent.Register("onReloginBaseappSuccessfully", this, undefined);
         // KBEEvent.Register("onLoginBaseapp", this, undefined);
+    }
+
+    OnConnectionState(isConnected: boolean)
+    {
+        KBEDebug.DEBUG_MSG("ClientApp::OnConnectionState:%s.", isConnected);
     }
 
     UninstallEvents()
