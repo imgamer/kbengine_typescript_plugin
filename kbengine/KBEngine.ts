@@ -1052,7 +1052,7 @@ export class KBEngineApp
                 if(Number(name) >= 0)
                     continue;
 
-                if(module.script !== undefined && module.script[name] === undefined)
+                if(module.script !== undefined && module.GetScriptMethod(name) === undefined)
                 {
                     KBEDebug.WARNING_MSG("Entity def %s::mehod(%s) no implement!", scriptmodule_name, name);
                 }
