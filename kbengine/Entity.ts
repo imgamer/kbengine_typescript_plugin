@@ -149,7 +149,7 @@ export default class Entity
         }
         catch(e)
         {
-            KBEDebug.ERROR_MSG(e.tostring());
+            KBEDebug.ERROR_MSG(e.toString());
             KBEDebug.ERROR_MSG("KBEngine.Entity::baseCall: args is error!");
             this.base.bundle = undefined;
         }

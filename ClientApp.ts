@@ -97,6 +97,6 @@ export default class ClientApp extends cc.Component
     UninstallEvents()
     {
         KBEDebug.INFO_MSG("ClientApp::UnstallEvents events.");
-        //KBEEvent.DeregisterObject(this);
+        KBEEvent.DeregisterObject(this);
     }
 }
