@@ -1344,6 +1344,8 @@ export class KBEngineApp
 
             entity.cell = new CellEntityCall(this.networkInterface);
             entity.cell.id = eid;
+            
+            this.entities[eid] = entity;
 
             this.Client_onUpdatePropertys(entityStream);
             delete this.bufferedCreateEntityMessage[eid];
