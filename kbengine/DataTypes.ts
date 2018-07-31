@@ -89,22 +89,22 @@ export class UINT64
 
 export function BuildINT64(data: number): INT64
 {
-    let low = data & 0xffff;
+    let low = data & 0xffffffff;
 
     // js不支持32位移位操作，分2次右移
     let high = data >> 16;
-    high = (high >> 16) & 0xffff;
+    high = (high >> 16) & 0xffffffff;
 
     return new INT64(low, high);
 }
 
 export function BuildUINT64(data: number): UINT64
 {
-    let low = data & 0xffff;
+    let low = data & 0xffffffff;
 
     // js不支持32位移位操作，分2次右移
     let high = data >> 16;
-    high = (high >> 16) & 0xffff;
+    high = (high >> 16) & 0xffffffff;
 
     return new UINT64(low, high);
 }
