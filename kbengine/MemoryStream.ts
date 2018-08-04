@@ -216,9 +216,6 @@ export default class MemoryStream
         yPackData.fv[0] -= 2.0;                     // 此时还未设置符号位，当作正数处理，-2后再加上符号位即可，无需根据正负来+-2
         yPackData.uv[0] |= (data & 0x8000) << 16;   // 设置符号位
 
-        // 临时做法。在js中要这么处理才能得到正确的值。
-        yPackData.fv[0] -= 100000;
-
         return yPackData.fv[0];
     }
 
