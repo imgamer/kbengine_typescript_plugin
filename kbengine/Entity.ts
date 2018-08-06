@@ -245,11 +245,18 @@ export default class Entity
 
     OnUpdateVolatileData()
     {
-        KBEDebug.DEBUG_MSG("Entity::OnUpdateVolatileData------------------->>>id:%s.", this.id);
+        KBEDebug.WARNING_MSG("Entity::OnUpdateVolatileData------------------->>>id:%s.y:%s", this.id, this.position.y);
     }
 
     set_position(oldVal: KBEMath.Vector3)
     {
+		if(this.IsPlayer())
+		{
+			KBEngineApp.app.entityServerPos.x = this.position.x;
+			KBEngineApp.app.entityServerPos.y = this.position.y;
+            KBEngineApp.app.entityServerPos.z = this.position.z;
+		}
+
         if(this.inWorld)
            KBEEvent.Fire("set_position", this);
     }

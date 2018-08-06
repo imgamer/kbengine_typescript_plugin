@@ -1367,7 +1367,7 @@ export class KBEngineApp
         }
         else
         {
-            if(entity.inWorld)
+            if(!entity.inWorld)
             {
                 // 安全起见， 这里清空一下
                 // 如果服务端上使用giveClientTo切换控制权
@@ -1381,7 +1381,6 @@ export class KBEngineApp
 
                 entity.set_direction(entity.direction);
                 entity.set_position(entity.position);
-                
                 this.entityServerPos.x = entity.position.x;
                 this.entityServerPos.y = entity.position.y;
                 this.entityServerPos.z = entity.position.z;
@@ -1492,7 +1491,6 @@ export class KBEngineApp
 		this.entityServerPos.y = entity.position.y;
 		this.entityServerPos.z = entity.position.z;
         entity.isOnGround = isOnGround > 0;
-
         entity.EnterSpace();
     }
 
