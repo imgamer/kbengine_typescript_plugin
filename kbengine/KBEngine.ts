@@ -1834,21 +1834,29 @@ export class KBEngineApp
 			entity.OnUpdateVolatileData();		
     }
     
-    Client_onUpdateBasePos(x, y, z)
-	{
-		this.entityServerPos.x = x;
-		this.entityServerPos.y = y;
-		this.entityServerPos.z = z;
-    }
-    
     Client_onUpdateBaseDir(stream: MemoryStream)
     {
     }
 
+    Client_onUpdateBasePos(x, y, z)
+	{
+        //KBEDebug.WARNING_MSG("Client_onUpdateBasePos---------->>>:x(%s),z(%s)..entityServerPos:x(%s),y(%s),z(%s).", x,z,this.entityServerPos.x,this.entityServerPos.y,this.entityServerPos.z);
+
+		this.entityServerPos.x = x;
+		this.entityServerPos.y = y;
+        this.entityServerPos.z = z;
+        
+        let entity = this.Player();
+        if(entity != undefined && entity.isControlled)
+        {
+            entity.OnUpdateVolatileData();
+        }
+    }
+
     Client_onUpdateBasePosXZ(x, z)
 	{
-		this.entityServerPos.x = x;
-		this.entityServerPos.z = z;
+        //KBEDebug.WARNING_MSG("Client_onUpdateBasePosXZ---------->>>:x(%s),z(%s)..entityServerPos:x(%s),y(%s),z(%s).", x,z,this.entityServerPos.x,this.entityServerPos.y,this.entityServerPos.z);
+        this.Client_onUpdateBasePos(x, this.entityServerPos.y, z);
     }
     
     Client_onUpdateData(stream: MemoryStream)
