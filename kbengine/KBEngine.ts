@@ -15,14 +15,12 @@ import * as KBEMath from "./KBEMath";
 
 export class KBEngineArgs
 {
-    ip: string = "127.0.0.1";
+    address: string = "127.0.0.1";
     port: number = 20013;
-    serverURL: string = "";
-    updateHZ: number = 100;
+    updateTick: number = 100;
     clientType: number = 5;
     isOnInitCallPropertysSetMethods: boolean = true;
     useWss = false;
-    useURL = false;
 }
 
 
@@ -54,17 +52,16 @@ export class KBEngineApp
 
     private serverErrors: {[key: number]: ServerError} = {};
 
-	// 登录loginapp的地址
-	private ip = "";
+    // 登录loginapp的地址
+    private serverAddress: string = "";
 	private port = 0;
 	
 	// 服务端分配的baseapp地址
-	private baseappIP = "";
+	private baseappAddress = "";
 	private baseappPort = 0;
 
+    private useWss: boolean = false;
     private protocol: string = "";
-    private useURL: boolean = false;
-    private serverURL: string = "";
 
     private currserver = "loginapp";
     private currstate = "create";
@@ -143,10 +140,9 @@ export class KBEngineApp
         KBEngineApp._app = this;
 
         this.args = args;
-        this.ip = args.ip;
+        this.serverAddress = args.address;
         this.port = args.port;
-        this.useURL = args.useURL;
-        this.serverURL = args.serverURL;
+        this.useWss = args.useWss;
         this.protocol = args.useWss? "wss://" : "ws://";
 
         this.InstallEvents();
@@ -157,7 +153,7 @@ export class KBEngineApp
         let now = new Date().getTime();
         this.lastTickTime = now;
         this.lastTickCBTime = now;
-        this.idInterval = setInterval(this.Update.bind(this), this.args.updateHZ);
+        this.idInterval = setInterval(this.Update.bind(this), this.args.updateTick);
     }
 
     InstallEvents(): void
@@ -196,31 +192,30 @@ export class KBEngineApp
 
     private GetLoginappAddr(): string
     {
-        let url = "";
-        if(this.useURL)
-            url = this.serverURL;
+        let addr: string = "";
+        if(this.useWss)
+        {
+            addr = this.protocol + this.serverAddress + "/loginapp:" + this.port;
+        }
         else
         {
-           url = this.ip + ":" + this.port;
+            addr = this.protocol + this.serverAddress + ":" + this.port;
         }
-            
-        let addr = this.protocol + url;
 
         return addr;
     }
 
     private GetBaseappAddr(): string
     {
-        let url = "";
-        if(this.useURL)
-            url = this.serverURL;
+        let addr: string = "";
+        if(this.useWss)
+        {
+            addr = this.protocol + this.baseappAddress + "/baseapp" + "?port=" + this.baseappPort;
+        }
         else
         {
-            url = this.baseappIP + ":" + this.baseappPort;
+            addr = this.protocol + this.baseappAddress + ":" + this.baseappPort;
         }
-            
-        let addr = this.protocol + url;
-
         return addr;
     }
 
@@ -348,7 +343,7 @@ export class KBEngineApp
 
     private OnOpenLoginapp_login(event: MessageEvent) 
     {
-        KBEDebug.DEBUG_MSG("KBEngineApp::onOpenLoginapp_login:success to %s.", this.ip);
+        KBEDebug.DEBUG_MSG("KBEngineApp::onOpenLoginapp_login:success to %s.", this.serverAddress);
         if(!this.networkInterface.IsGood)   // 有可能在连接过程中被关闭
         {
             KBEDebug.WARNING_MSG("KBEngineApp::onOpenLoginapp_login:network has been closed in connecting!");
@@ -805,12 +800,12 @@ export class KBEngineApp
         KBEDebug.DEBUG_MSG("Client_onLoginSuccessfully------------------->>>");
 		var accountName = stream.ReadString();
 		this.userName = accountName;
-		this.baseappIP = stream.ReadString();
+		this.baseappAddress = stream.ReadString();
 		this.baseappPort = stream.ReadUint16();
 		this.serverdatas = stream.ReadBlob();
 		
 		KBEDebug.INFO_MSG("KBEngineApp::Client_onLoginSuccessfully: accountName(" + accountName + "), addr(" + 
-        this.baseappIP + ":" + this.baseappPort + "), datas(" + this.serverdatas.length + ")!");
+        this.baseappAddress + ":" + this.baseappPort + "), datas(" + this.serverdatas.length + ")!");
 		
 		this.networkInterface.Close();
 		this.Login_baseapp(true);

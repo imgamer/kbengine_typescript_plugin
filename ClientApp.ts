@@ -10,7 +10,7 @@ const {ccclass, property} = cc._decorator;
 export default class ClientApp extends cc.Component 
 {
     @property
-    IP: string = "127.0.0.1";
+    serverAddress: string = "127.0.0.1";
 
     @property
     port: number = 20013;
@@ -19,13 +19,7 @@ export default class ClientApp extends cc.Component
     useWss: boolean = false;
 
     @property
-    useURL: boolean = false;
-
-    @property
-    serverURL: string = "";
-
-    @property
-    updateHZ = 100;
+    updateTick = 100;
 
     @property
     isOnInitCallPropertysSetMethods = true;
@@ -53,14 +47,12 @@ export default class ClientApp extends cc.Component
     InitKBEngine()
     {
         let args = new KBEngineArgs();
-        args.ip = this.IP;
+        args.address = this.serverAddress;
         args.port = this.port;
-        args.updateHZ = this.updateHZ;
+        args.updateTick = this.updateTick;
         args.isOnInitCallPropertysSetMethods = this.isOnInitCallPropertysSetMethods;
         args.clientType = this.clientType;
-        args.serverURL = this.serverURL;
         args.useWss = this.useWss;
-        args.useURL = this.useURL;
 
         KBEngineApp.Create(args);
     }
