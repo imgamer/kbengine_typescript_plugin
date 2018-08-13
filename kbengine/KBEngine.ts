@@ -21,6 +21,7 @@ export class KBEngineArgs
     clientType: number = 5;
     isOnInitCallPropertysSetMethods: boolean = true;
     useWss = false;
+    wssBaseappPort = 443;
 }
 
 
@@ -61,6 +62,7 @@ export class KBEngineApp
 	private baseappPort = 0;
 
     private useWss: boolean = false;
+    private wssBaseappPort: number = 443;
     private protocol: string = "";
 
     private currserver = "loginapp";
@@ -143,6 +145,7 @@ export class KBEngineApp
         this.serverAddress = args.address;
         this.port = args.port;
         this.useWss = args.useWss;
+        this.wssBaseappPort = args.wssBaseappPort;
         this.protocol = args.useWss? "wss://" : "ws://";
 
         this.InstallEvents();
@@ -195,7 +198,7 @@ export class KBEngineApp
         let addr: string = "";
         if(this.useWss)
         {
-            addr = this.protocol + this.serverAddress + "/loginapp:" + this.port;
+            addr = this.protocol + this.serverAddress + ":" + this.port + "/loginapp";
         }
         else
         {
@@ -210,7 +213,7 @@ export class KBEngineApp
         let addr: string = "";
         if(this.useWss)
         {
-            addr = this.protocol + this.baseappAddress + "/baseapp" + "?port=" + this.baseappPort;
+            addr = this.protocol + this.baseappAddress + ":" + this.wssBaseappPort + "/baseapp" + "?port=" + this.baseappPort;
         }
         else
         {

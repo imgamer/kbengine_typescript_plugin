@@ -19,6 +19,9 @@ export default class ClientApp extends cc.Component
     useWss: boolean = false;
 
     @property
+    wssBaseappPort: number = 443;
+
+    @property
     updateTick = 100;
 
     @property
@@ -53,6 +56,7 @@ export default class ClientApp extends cc.Component
         args.isOnInitCallPropertysSetMethods = this.isOnInitCallPropertysSetMethods;
         args.clientType = this.clientType;
         args.useWss = this.useWss;
+        args.wssBaseappPort = this.wssBaseappPort;
 
         KBEngineApp.Create(args);
     }
