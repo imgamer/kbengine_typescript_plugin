@@ -5,6 +5,8 @@ import * as KBEMath from "./KBEMath";
 import * as KBEEncoding from "./KBEEncoding";
 import KBEDebug from "./KBEDebug";
 
+const TWO_PWR_16_DBL = 1 << 16;
+const TWO_PWR_32_DBL = TWO_PWR_16_DBL * TWO_PWR_16_DBL;
 
 export class INT64
 {
@@ -55,6 +57,15 @@ export class INT64
 		
 		return result + low;
     }
+
+    static BuildINT64(data: number): INT64
+    {
+        let low = (data % TWO_PWR_32_DBL) | 0;
+        low >>>= 0;
+        let high = (data / TWO_PWR_32_DBL) | 0;
+    
+        return new INT64(low, high);
+    }
 }
 
 export class UINT64
@@ -85,28 +96,26 @@ export class UINT64
 
 		return result + low;
     }
+
+    static BuildUINT64(data: number): UINT64
+    {
+        let low = (data % TWO_PWR_32_DBL) | 0;
+        low >>>= 0;
+        let high = (data / TWO_PWR_32_DBL) | 0;
+        high >>>= 0;
+        //KBEDebug.WARNING_MSG("Datatypes::BuildUINT64:low:%s, low hex(%s);high:%s, high hex(%s).", low, low.toString(16), high, high.toString(16));
+        return new UINT64(low, high);
+    }
 }
 
 export function BuildINT64(data: number): INT64
 {
-    let low = data & 0xffffffff;
-
-    // js不支持32位移位操作，分2次右移
-    let high = data >> 16;
-    high = (high >> 16) & 0xffffffff;
-
-    return new INT64(low, high);
+    return INT64.BuildINT64(data);
 }
 
 export function BuildUINT64(data: number): UINT64
 {
-    let low = data & 0xffffffff;
-
-    // js不支持32位移位操作，分2次右移
-    let high = data >> 16;
-    high = (high >> 16) & 0xffffffff;
-
-    return new UINT64(low, high);
+    return UINT64.BuildUINT64(data);
 }
 
 function IsNumber(anyObject: any): boolean
