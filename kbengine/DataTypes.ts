@@ -75,7 +75,7 @@ export class UINT64
 
     constructor(p_low: number, p_high: number)
     {
-        this.low = p_low;
+        this.low = p_low >>> 0;
         this.high = p_high;
     }
 
