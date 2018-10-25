@@ -1,7 +1,7 @@
 
 export default class KBEDebug
 {
-    static CC_PLATFORM = typeof cc != "undefined";  // 特别针对cc平台
+    static KBE_CC_PLATFORM = typeof cc != "undefined";  // 特别针对cc平台
 
     static DEBUG_MSG(msg: string, ...optionalParams: any[]): void
     {
@@ -12,7 +12,7 @@ export default class KBEDebug
     static INFO_MSG(msg: string, ...optionalParams: any[]): void
     {
         optionalParams.unshift(msg);
-        if (this.CC_PLATFORM) 
+        if (this.KBE_CC_PLATFORM) 
         {
             cc.info.apply(this, optionalParams);
         }
@@ -25,7 +25,7 @@ export default class KBEDebug
     static WARNING_MSG(msg: string, ...optionalParams: any[]): void
     {
         optionalParams.unshift(msg);
-        if (this.CC_PLATFORM) 
+        if (this.KBE_CC_PLATFORM) 
         {
             cc.warn.apply(this, optionalParams);
         }
@@ -38,7 +38,7 @@ export default class KBEDebug
     static ERROR_MSG(msg: string, ...optionalParams: any[]): void
     {
         optionalParams.unshift(msg);
-        if (this.CC_PLATFORM) 
+        if (this.KBE_CC_PLATFORM) 
         {
             cc.error.apply(this, optionalParams);
         }
@@ -50,6 +50,13 @@ export default class KBEDebug
 
     static ASSERT(condition?: boolean, message?: string, ...data: any[]): void
     {
-        console.assert(condition, message, ...data);
+        // 使用抛出异常的方式来实现类似断言功能
+        if(!condition)
+        {
+            throw(new Error(message));
+        }
+
+        // note：微信小游戏平台不支持，手册中提到的CC_WECHATGAME未定义，无法区分是否微信小游戏平台，
+        // console.assert(condition, message, ...data);
     }
 }

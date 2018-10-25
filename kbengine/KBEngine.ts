@@ -15,14 +15,13 @@ import * as KBEMath from "./KBEMath";
 
 export class KBEngineArgs
 {
-    ip: string = "127.0.0.1";
+    address: string = "127.0.0.1";
     port: number = 20013;
-    serverURL: string = "";
-    updateHZ: number = 100;
+    updateTick: number = 100;
     clientType: number = 5;
     isOnInitCallPropertysSetMethods: boolean = true;
     useWss = false;
-    useURL = false;
+    wssBaseappPort = 443;
 }
 
 
@@ -54,17 +53,17 @@ export class KBEngineApp
 
     private serverErrors: {[key: number]: ServerError} = {};
 
-	// 登录loginapp的地址
-	private ip = "";
+    // 登录loginapp的地址
+    private serverAddress: string = "";
 	private port = 0;
 	
 	// 服务端分配的baseapp地址
-	private baseappIP = "";
+	private baseappAddress = "";
 	private baseappPort = 0;
 
+    private useWss: boolean = false;
+    private wssBaseappPort: number = 443;
     private protocol: string = "";
-    private useURL: boolean = false;
-    private serverURL: string = "";
 
     private currserver = "loginapp";
     private currstate = "create";
@@ -143,10 +142,10 @@ export class KBEngineApp
         KBEngineApp._app = this;
 
         this.args = args;
-        this.ip = args.ip;
+        this.serverAddress = args.address;
         this.port = args.port;
-        this.useURL = args.useURL;
-        this.serverURL = args.serverURL;
+        this.useWss = args.useWss;
+        this.wssBaseappPort = args.wssBaseappPort;
         this.protocol = args.useWss? "wss://" : "ws://";
 
         this.InstallEvents();
@@ -157,7 +156,7 @@ export class KBEngineApp
         let now = new Date().getTime();
         this.lastTickTime = now;
         this.lastTickCBTime = now;
-        this.idInterval = setInterval(this.Update.bind(this), this.args.updateHZ);
+        this.idInterval = setInterval(this.Update.bind(this), this.args.updateTick);
     }
 
     InstallEvents(): void
@@ -196,31 +195,30 @@ export class KBEngineApp
 
     private GetLoginappAddr(): string
     {
-        let url = "";
-        if(this.useURL)
-            url = this.serverURL;
+        let addr: string = "";
+        if(this.useWss)
+        {
+            addr = this.protocol + this.serverAddress + ":" + this.port + "/loginapp";
+        }
         else
         {
-           url = this.ip + ":" + this.port;
+            addr = this.protocol + this.serverAddress + ":" + this.port;
         }
-            
-        let addr = this.protocol + url;
 
         return addr;
     }
 
     private GetBaseappAddr(): string
     {
-        let url = "";
-        if(this.useURL)
-            url = this.serverURL;
+        let addr: string = "";
+        if(this.useWss)
+        {
+            addr = this.protocol + this.baseappAddress + ":" + this.wssBaseappPort + "/baseapp" + "?port=" + this.baseappPort;
+        }
         else
         {
-            url = this.baseappIP + ":" + this.baseappPort;
+            addr = this.protocol + this.baseappAddress + ":" + this.baseappPort;
         }
-            
-        let addr = this.protocol + url;
-
         return addr;
     }
 
@@ -348,7 +346,7 @@ export class KBEngineApp
 
     private OnOpenLoginapp_login(event: MessageEvent) 
     {
-        KBEDebug.DEBUG_MSG("KBEngineApp::onOpenLoginapp_login:success to %s.", this.ip);
+        KBEDebug.DEBUG_MSG("KBEngineApp::onOpenLoginapp_login:success to %s.", this.serverAddress);
         if(!this.networkInterface.IsGood)   // 有可能在连接过程中被关闭
         {
             KBEDebug.WARNING_MSG("KBEngineApp::onOpenLoginapp_login:network has been closed in connecting!");
@@ -805,12 +803,12 @@ export class KBEngineApp
         KBEDebug.DEBUG_MSG("Client_onLoginSuccessfully------------------->>>");
 		var accountName = stream.ReadString();
 		this.userName = accountName;
-		this.baseappIP = stream.ReadString();
+		this.baseappAddress = stream.ReadString();
 		this.baseappPort = stream.ReadUint16();
 		this.serverdatas = stream.ReadBlob();
 		
 		KBEDebug.INFO_MSG("KBEngineApp::Client_onLoginSuccessfully: accountName(" + accountName + "), addr(" + 
-        this.baseappIP + ":" + this.baseappPort + "), datas(" + this.serverdatas.length + ")!");
+        this.baseappAddress + ":" + this.baseappPort + "), datas(" + this.serverdatas.length + ")!");
 		
 		this.networkInterface.Close();
 		this.Login_baseapp(true);
@@ -1052,7 +1050,7 @@ export class KBEngineApp
                 if(Number(name) >= 0)
                     continue;
 
-                if(module.script !== undefined && module.script[name] === undefined)
+                if(module.script !== undefined && module.GetScriptMethod(name) === undefined)
                 {
                     KBEDebug.WARNING_MSG("Entity def %s::mehod(%s) no implement!", scriptmodule_name, name);
                 }
@@ -1138,7 +1136,7 @@ export class KBEngineApp
     Client_onUpdatePropertys(stream: MemoryStream)
     {
         let eid = stream.ReadInt32();
-        KBEDebug.DEBUG_MSG("Client_onUpdatePropertys------------------->>>eid:%s.", eid);
+        //KBEDebug.DEBUG_MSG("Client_onUpdatePropertys------------------->>>eid:%s.", eid);
         this.OnUpdatePropertys(eid, stream);
     }
 
@@ -1173,8 +1171,8 @@ export class KBEngineApp
             let propertyData: EntityDef.Property = module.propertys[utype];
             let val = propertyData.utype.CreateFromStream(stream);
             let oldval = entity.GetPropertyValue(propertyData.name);
-            KBEDebug.INFO_MSG("KBEngineApp::OnUpdatePropertys: entity %s(id:%d, name:%s change oldval(%s) to val(%s), IsBase(%s),inited(%s), handler(%s).", 
-                                entity.className, eid, propertyData.name, oldval, val, propertyData.IsBase(), entity.inited, propertyData.setHandler);
+            //KBEDebug.DEBUG_MSG("KBEngineApp::OnUpdatePropertys: entity %s(id:%d, name:%s change oldval(%s) to val(%s), IsBase(%s),inited(%s).", 
+            //                    entity.className, eid, propertyData.name, oldval, val, propertyData.IsBase(), entity.inited);
 
             entity.SetPropertyValue(propertyData.name, val);
 
@@ -1261,8 +1259,8 @@ export class KBEngineApp
 
         let defMethod: EntityDef.Method = scriptModule.methods[methodUtype];
 
-        KBEDebug.DEBUG_MSG("KBEngineApp::OnRemoteMethodCall: methodUtype(%d), methodName(%s), use alias(%s).", 
-                            methodUtype, defMethod.name, scriptModule.useMethodDescrAlias);
+        //KBEDebug.DEBUG_MSG("KBEngineApp::OnRemoteMethodCall: methodUtype(%d), methodName(%s), use alias(%s).", 
+        //                    methodUtype, defMethod.name, scriptModule.useMethodDescrAlias);
 
         let args = [];
         for(let i = 0; i< defMethod.args.length; i++)
@@ -1288,14 +1286,14 @@ export class KBEngineApp
 
     Client_onRemoteMethodCallOptimized(stream: MemoryStream)
     {
-        KBEDebug.DEBUG_MSG("Client_onRemoteMethodCallOptimized------------------->>>.");
+        //KBEDebug.DEBUG_MSG("Client_onRemoteMethodCallOptimized------------------->>>.");
         let eid = this.GetViewEntityIDFromStream(stream);
         this.OnRemoteMethodCall(eid, stream);
     }
 
     Client_onEntityEnterWorld(stream: MemoryStream)
     {
-        KBEDebug.DEBUG_MSG("Client_onEntityEnterWorld------------------->>>.");
+        //KBEDebug.DEBUG_MSG("Client_onEntityEnterWorld------------------->>>.");
 
         let eid = stream.ReadInt32();
         if(this.entity_id > 0 && this.entity_id !== eid)
@@ -1344,6 +1342,8 @@ export class KBEngineApp
 
             entity.cell = new CellEntityCall(this.networkInterface);
             entity.cell.id = eid;
+            
+            this.entities[eid] = entity;
 
             this.Client_onUpdatePropertys(entityStream);
             delete this.bufferedCreateEntityMessage[eid];
@@ -1365,7 +1365,7 @@ export class KBEngineApp
         }
         else
         {
-            if(entity.inWorld)
+            if(!entity.inWorld)
             {
                 // 安全起见， 这里清空一下
                 // 如果服务端上使用giveClientTo切换控制权
@@ -1379,7 +1379,6 @@ export class KBEngineApp
 
                 entity.set_direction(entity.direction);
                 entity.set_position(entity.position);
-                
                 this.entityServerPos.x = entity.position.x;
                 this.entityServerPos.y = entity.position.y;
                 this.entityServerPos.z = entity.position.z;
@@ -1490,7 +1489,6 @@ export class KBEngineApp
 		this.entityServerPos.y = entity.position.y;
 		this.entityServerPos.z = entity.position.z;
         entity.isOnGround = isOnGround > 0;
-
         entity.EnterSpace();
     }
 
@@ -1834,21 +1832,29 @@ export class KBEngineApp
 			entity.OnUpdateVolatileData();		
     }
     
-    Client_onUpdateBasePos(x, y, z)
-	{
-		this.entityServerPos.x = x;
-		this.entityServerPos.y = y;
-		this.entityServerPos.z = z;
-    }
-    
     Client_onUpdateBaseDir(stream: MemoryStream)
     {
     }
 
+    Client_onUpdateBasePos(x, y, z)
+	{
+        //KBEDebug.WARNING_MSG("Client_onUpdateBasePos---------->>>:x(%s),z(%s)..entityServerPos:x(%s),y(%s),z(%s).", x,z,this.entityServerPos.x,this.entityServerPos.y,this.entityServerPos.z);
+
+		this.entityServerPos.x = x;
+		this.entityServerPos.y = y;
+        this.entityServerPos.z = z;
+        
+        let entity = this.Player();
+        if(entity != undefined && entity.isControlled)
+        {
+            entity.OnUpdateVolatileData();
+        }
+    }
+
     Client_onUpdateBasePosXZ(x, z)
 	{
-		this.entityServerPos.x = x;
-		this.entityServerPos.z = z;
+        //KBEDebug.WARNING_MSG("Client_onUpdateBasePosXZ---------->>>:x(%s),z(%s)..entityServerPos:x(%s),y(%s),z(%s).", x,z,this.entityServerPos.x,this.entityServerPos.y,this.entityServerPos.z);
+        this.Client_onUpdateBasePos(x, this.entityServerPos.y, z);
     }
     
     Client_onUpdateData(stream: MemoryStream)

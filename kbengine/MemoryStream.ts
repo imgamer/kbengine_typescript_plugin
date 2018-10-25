@@ -208,7 +208,15 @@ export default class MemoryStream
 
     ReadPackY(): number
     {
-        return this.ReadUint16();
+        let data = this.ReadUint16();
+        
+        let yPackData = new PackFloatXType();
+        yPackData.uv[0] = 0x40000000;
+        yPackData.uv[0] |= (data & 0x7fff) << 12;   // 解压，补足尾数
+        yPackData.fv[0] -= 2.0;                     // 此时还未设置符号位，当作正数处理，-2后再加上符号位即可，无需根据正负来+-2
+        yPackData.uv[0] |= (data & 0x8000) << 16;   // 设置符号位
+
+        return yPackData.fv[0];
     }
 
     WriteInt8(value: number): void

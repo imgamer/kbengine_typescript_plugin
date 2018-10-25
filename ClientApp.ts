@@ -10,7 +10,7 @@ const {ccclass, property} = cc._decorator;
 export default class ClientApp extends cc.Component 
 {
     @property
-    IP: string = "127.0.0.1";
+    serverAddress: string = "127.0.0.1";
 
     @property
     port: number = 20013;
@@ -19,10 +19,10 @@ export default class ClientApp extends cc.Component
     useWss: boolean = false;
 
     @property
-    serverURL: string = "";
+    wssBaseappPort: number = 443;
 
     @property
-    updateHZ = 100;
+    updateTick = 100;
 
     @property
     isOnInitCallPropertysSetMethods = true;
@@ -50,13 +50,13 @@ export default class ClientApp extends cc.Component
     InitKBEngine()
     {
         let args = new KBEngineArgs();
-        args.ip = this.IP;
+        args.address = this.serverAddress;
         args.port = this.port;
-        args.updateHZ = this.updateHZ;
+        args.updateTick = this.updateTick;
         args.isOnInitCallPropertysSetMethods = this.isOnInitCallPropertysSetMethods;
         args.clientType = this.clientType;
-        args.serverURL = this.serverURL;
         args.useWss = this.useWss;
+        args.wssBaseappPort = this.wssBaseappPort;
 
         KBEngineApp.Create(args);
     }
@@ -77,18 +77,22 @@ export default class ClientApp extends cc.Component
     InstallEvents()
     {
         KBEDebug.INFO_MSG("ClientApp::InstallEvents:start scene install event.");
-        // KBEEvent.Register("onConnectionState", this, undefined);
+        KBEEvent.Register("onConnectionState", this, this.OnConnectionState);
         // KBEEvent.Register("onLoginFailed", this, undefined);
         // KBEEvent.Register("onLoginBaseappFailed", this, undefined);
-        // KBEEvent.Register("enterScene", this, undefined);
         // KBEEvent.Register("onReloginBaseappFailed", this, undefined);
         // KBEEvent.Register("onReloginBaseappSuccessfully", this, undefined);
         // KBEEvent.Register("onLoginBaseapp", this, undefined);
     }
 
+    OnConnectionState(isConnected: boolean)
+    {
+        KBEDebug.DEBUG_MSG("ClientApp::OnConnectionState:%s.", isConnected);
+    }
+
     UninstallEvents()
     {
         KBEDebug.INFO_MSG("ClientApp::UnstallEvents events.");
-        //KBEEvent.DeregisterObject(this);
+        KBEEvent.DeregisterObject(this);
     }
 }

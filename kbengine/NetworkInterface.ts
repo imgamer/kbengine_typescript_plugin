@@ -43,7 +43,7 @@ export default class NetworkInterface
     {
         try
         {
-            KBEDebug.INFO_MSG("NetworkInterface::Close"+this.IsGood)
+            KBEDebug.INFO_MSG("NetworkInterface::Close on good:" + this.IsGood)
             if(this.socket != undefined)
             {
                 this.socket.close();
@@ -95,14 +95,14 @@ export default class NetworkInterface
     private onmessage = (event: MessageEvent) =>
     {
         let data: ArrayBuffer = event.data;
-        KBEDebug.DEBUG_MSG("NetworkInterface::onmessage:...!" + data.byteLength);
+        //KBEDebug.DEBUG_MSG("NetworkInterface::onmessage:...!" + data.byteLength);
         let stream: MemoryStream = new MemoryStream(data);
         stream.wpos = data.byteLength;
 
         while(stream.rpos < stream.wpos)
         {
             let msgID = stream.ReadUint16();
-            KBEDebug.DEBUG_MSG("NetworkInterface::onmessage:...!msgID:" + msgID);
+            //KBEDebug.DEBUG_MSG("NetworkInterface::onmessage:...!msgID:" + msgID);
 
             let handler: Message = Message.clientMassges[msgID];
             if(!handler)
