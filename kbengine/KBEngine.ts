@@ -1737,7 +1737,7 @@ export class KBEngineApp
             return;
         }
 
-        var isCont = isControlled !== false;
+        let isCont = isControlled != false;
         if (isCont)
         {
             // 如果被控制者是玩家自己，那表示玩家自己被其它人控制了
