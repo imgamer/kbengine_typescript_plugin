@@ -68,8 +68,10 @@ export default class KBEEvent
             return;
         }
 
-        for(let item of eventList)
+        // 在事件执行时注销事件会导致索引错乱，因此从后往前遍历执行
+        for(let i = eventList.length -1; i >= 0; i--)
         {
+            let item = eventList[i];
             try
             {
                 // 注意，传入参数和注册函数参数类型数量可以不一致，作为事件函数的参数类型检查没有作用
