@@ -18,6 +18,7 @@ import KBEEvent from "./Event";
 export default class Entity
 {
     static SCRIPT_NAME = "Entity";  // 每个entity脚本都需要定义这个静态属性，用于注册entity脚本
+    static EntityScripts = {};      // 所有entity脚本注册到此处
 
     id: number;
     className: string;
@@ -39,6 +40,23 @@ export default class Entity
     base: EntityCall;
 
     Name: string = "wsf";
+
+    static RegisterScript(scriptName: string, script: any): void
+    {
+        KBEDebug.DEBUG_MSG("Entity::RegisterScript(%s).", scriptName);
+        Entity.EntityScripts[scriptName] = script;
+    }
+
+    static GetEntityScript(scriptName: string): any
+    {
+        let script =  Entity.EntityScripts[scriptName];
+        if(script === undefined)
+        {
+            KBEDebug.ERROR_MSG("Entity::GetEntityScript(%s) is undefined.", scriptName);
+        }
+    
+        return script;
+    }
 
     __init__()
     {

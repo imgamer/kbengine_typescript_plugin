@@ -1,23 +1,22 @@
 
-import Entity from "../kbengine/Entity";
+import GameEntity from "./GameEntity";
 import KBEDebug from "../kbengine/KBEDebug";
-import {RegisterScript} from "./ExportEntity";
 import * as Datatypes from "../kbengine/DataTypes";
 
 
-export default class Account extends Entity
+export default class Account extends GameEntity
 {
     static SCRIPT_NAME = "Account";
 
     set_dbidFromClient(oldval: any)
     {
-        KBEDebug.DEBUG_MSG("Entity::set_dbidFromClient------------------->>>id:%d value:%s.", this.id, this["dbidFromClient"].toString());
+        KBEDebug.INFO_MSG("Entity::set_dbidFromClient------------------->>>id:%d value:%s.", this.id, this["dbidFromClient"].toString());
         
     }
 
     set_wxnickname(oldval: any)
     {
-        KBEDebug.DEBUG_MSG("Entity::set_wxnickname------------------->>>id:%d value:%s.", this.id, this["wxnickname"].toString());
+        KBEDebug.INFO_MSG("Entity::set_wxnickname------------------->>>id:%d value:%s.", this.id, this["wxnickname"].toString());
 
         let data = Datatypes.BuildUINT64(15);
         this.BaseCall("pingBase", data);
@@ -25,15 +24,15 @@ export default class Account extends Entity
 
     pingBack(data: Datatypes.UINT64)
     {
-        KBEDebug.DEBUG_MSG("Entity::pingBack------------------->>>id:%d value:%s.", this.id, data.toString());
+        KBEDebug.INFO_MSG("Entity::pingBack------------------->>>id:%d value:%s.", this.id, data.toString());
     }
-
+    
     receiveLoginAffiche(LOGIN_AFFICHE_DATA)
     {
         let title = LOGIN_AFFICHE_DATA["title"];
         let msg = LOGIN_AFFICHE_DATA["msg"];
-        KBEDebug.DEBUG_MSG("Entity::receiveLoginAffiche------------------->>>title:%s.msg:%s.", title, msg);
+        KBEDebug.INFO_MSG("Entity::receiveLoginAffiche------------------->>>title:%s.msg:%s.", title, msg);
     }
 }
 
-RegisterScript(Account.SCRIPT_NAME, Account);
+Account.RegisterScript(Account.SCRIPT_NAME, Account);

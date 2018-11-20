@@ -1,7 +1,6 @@
 import {DATATYPE_BASE} from "./DataTypes";
 import Entity from "./Entity";
 import KBEDebug from "./KBEDebug";
-import * as ExportEntity from "./../entities/ExportEntity";
 
 enum EntityDataFlags
 {
@@ -69,7 +68,7 @@ export class ScriptModule
 
     constructor(moduleName: string)
     {
-        this.script = ExportEntity.GetEntityScript(moduleName);
+        this.script = Entity.GetEntityScript(moduleName);
         if(this.script === undefined)
         {
             //throw(Error("ScriptModule::cant find script:" + moduleName));
