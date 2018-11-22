@@ -1,10 +1,10 @@
 
-import GameEntity from "./GameEntity";
+import DemoEntity from "./DemoEntity";
 import KBEDebug from "../kbengine/KBEDebug";
 import * as Datatypes from "../kbengine/DataTypes";
 
 
-export default class Account extends GameEntity
+export default class DemoAccount extends DemoEntity
 {
     static SCRIPT_NAME = "Account";
 
@@ -35,4 +35,4 @@ export default class Account extends GameEntity
     }
 }
 
-Account.RegisterScript(Account.SCRIPT_NAME, Account);
+DemoAccount.RegisterScript(DemoAccount.SCRIPT_NAME, DemoAccount);

@@ -3,7 +3,7 @@ import KBEDebug from "../kbengine/KBEDebug";
 import Entity from "../kbengine/Entity";
 import * as Datatypes from "../kbengine/DataTypes";
 
-export default class GameEntity extends Entity
+export default class DemoEntity extends Entity
 {
     constructor()
     {
