@@ -14,7 +14,7 @@ export default class KBEDebug
         optionalParams.unshift(msg);
         if (this.KBE_CC_PLATFORM) 
         {
-            cc.info.apply(this, optionalParams);
+            cc.log.apply(this, optionalParams);
         }
         else 
         {

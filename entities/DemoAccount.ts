@@ -6,7 +6,7 @@ import * as Datatypes from "../kbengine/DataTypes";
 
 export default class DemoAccount extends DemoEntity
 {
-    static SCRIPT_NAME = "Account";
+    static SCRIPT_NAME = "DemoAccount";
 
     set_dbidFromClient(oldval: any)
     {

@@ -38,8 +38,7 @@ export default class ClientApp extends cc.Component
 
     onLoad()
     {
-        this.InitKBEngine();
-        this.InstallEvents();
+        cc.game.addPersistRootNode(this.node);
     }
 
     start()
@@ -47,8 +46,16 @@ export default class ClientApp extends cc.Component
         //this.Login();
     }
 
+    run()
+    {
+        this.InitKBEngine();
+        this.InstallEvents();
+    }
+
     InitKBEngine()
     {
+        KBEDebug.INFO_MSG("ClientApp::InitKBEngine.");
+        
         let args = new KBEngineArgs();
         args.address = this.serverAddress;
         args.port = this.port;

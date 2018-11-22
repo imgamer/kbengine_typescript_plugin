@@ -1,4 +1,3 @@
-
 import KBEDebug from "../kbengine/KBEDebug";
 import Entity from "../kbengine/Entity";
 import * as Datatypes from "../kbengine/DataTypes";
