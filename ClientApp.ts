@@ -36,6 +36,8 @@ export default class ClientApp extends cc.Component
     @property
     password = "123456";
 
+    private running = false;
+
     onLoad()
     {
         cc.game.addPersistRootNode(this.node);
@@ -48,8 +50,12 @@ export default class ClientApp extends cc.Component
 
     run()
     {
-        this.InitKBEngine();
-        this.InstallEvents();
+        if(!this.running)
+        {
+            this.InitKBEngine();
+            this.InstallEvents();
+            this.running = true;
+        }
     }
 
     InitKBEngine()
