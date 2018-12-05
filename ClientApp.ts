@@ -74,16 +74,17 @@ export default class ClientApp extends cc.Component
         KBEngineApp.Create(args);
     }
 
-    Login(userName?: string, password?: string, data?: Uint8Array)
+    Login(userName?: string, password?: string, data?: string)
     {
         if(userName && password && data)
         {
-            KBEngineApp.app.Login(userName, password, data);
+            let utf8data = KBEEncoding.StringToUTF8Array(data);
+            KBEngineApp.app.Login(userName, password, utf8data);
         }
         else
         {
-            let data = KBEEncoding.StringToUTF8Array("test");
-            KBEngineApp.app.Login(this.userName, this.password, data);
+            let utf8data = KBEEncoding.StringToUTF8Array("test");
+            KBEngineApp.app.Login(this.userName, this.password, utf8data);
         }
     }
 
