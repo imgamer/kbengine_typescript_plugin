@@ -101,13 +101,7 @@ export default class Entity
 
     GetPropertyValue(name: string)
     {
-        let value = this[name];
-        if(value == undefined)
-        {
-            KBEDebug.WARNING_MSG("Entity::GetPropertyValue: property(%s) not found(undefined).", name);
-        }
-
-        return value;
+        return this[name];
     }
 
     SetPropertyValue(name: string, value: any)
