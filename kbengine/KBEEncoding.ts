@@ -7,6 +7,7 @@ export function UTF8ArrayToString(array: Uint8Array): string
     let char1: number;
     let char2: number;
     let char3: number;
+    let char4: number;
 
     for(let i = 0; i < array.length;)
     {
@@ -36,8 +37,15 @@ export function UTF8ArrayToString(array: Uint8Array): string
                 out += String.fromCharCode( (char1 & 0x0F) << 12 | (char2 & 0x3F) << 6 | (char3 & 0x3F) << 0);
                 i += 3;
                 break;
+            case 15:
+                char2 = array[i + 1];
+                char3 = array[i + 2];
+                char4 = array[i + 3];
+                i += 4;
+                out += String.fromCharCode( (char1 & 0x07) << 18 | (char2 & 0x3F) << 12 | (char3 & 0x3F) << 6 | (char4 & 0x3F) << 0);
             default:
                 KBEDebug.ERROR_MSG("UTF8ArrayToString::execute flow shouldnt reach here.");
+                return out;
         }
     }
 
