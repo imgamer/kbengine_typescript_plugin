@@ -53,6 +53,6 @@ export class BaseEntityCall extends EntityCall
     BuildBundle()
     {
         KBEDebug.ASSERT(this.bundle !== undefined);
-        this.bundle.NewMessage(Message.messages["Base_onRemoteMethodCall"])
+        this.bundle.NewMessage(Message.messages["Entity_onRemoteMethodCall"])
     }
 }
