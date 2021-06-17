@@ -59,14 +59,22 @@ export default class MemoryStream
     {
         let buf = new Uint8Array(this.buffer, this.rpos);
         this.rpos += 2;
+        // (buf[0] & 0xff) 得到字节模式，可以当无符号数对待，否则有符号数负数右移操作会补1
         return ((buf[1] & 0xff) << 8) + (buf[0] & 0xff);
     }
 
     ReadInt16(): number
     {
-        let value = this.ReadUint16();
-        if(value >= 32768)
-            value -= 65536;
+        let value = this.ReadUint16();  // 把读出来的字节模式解释为number类型
+        if(value >= 32768)  // 如果最高位是1，实际是个负数，此时负数会被当成正数，
+                            // 字节模式是补码，需要解释成负数
+            value -= 65536; // 为何减去65536就能得出Int16值？
+                            // 65536是16位最大值溢出的0值，同一个值正负数相加就会得0，
+                            // 实际是正负数补码相加运算，得到65536，也就是溢出的0值，
+                            // 因此减去65536得到的就是负数补码值，举例如下：
+                            // -32767补码为0b1000000000000001，解释为正数是32769
+                            // 0b1000000000000001 - 65536 = -32767
+                            // -65补码为0b10111111，解释为正数是191，0b10111111-256=-65
         return value;
     }
 
